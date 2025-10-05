@@ -1,0 +1,28 @@
+import re
+
+class PATTERNS:
+    # Padrões regex para identificadores
+    CLASS_NAME = re.compile(r'[A-Z][a-zA-Z]*(_[a-zA-Z]+)*[a-zA-Z]*')
+    RELATION_NAME = re.compile(r'[a-z][a-zA-Z]*(_[a-zA-Z]+)*[a-zA-Z]*')
+    INSTANCE_NAME = re.compile(r'[a-zA-Z][a-zA-Z_]*(_[a-zA-Z]+)*\d+')
+    DATATYPE_NAME = re.compile(r'[a-zA-Z]+DataType')
+    IDENTIFIER = re.compile(r'[a-zA-Z_][a-zA-Z_0-9]*')
+    NUMBER = re.compile(r'\d+')
+    STRING = re.compile(r'\"([^\\\n]|(\\.))*?\"')
+    COMMENT = re.compile(r'\#.*')
+    
+    # Símbolos especiais
+    SYMBOLS = {
+        '{': 'LBRACE',
+        '}': 'RBRACE', 
+        '(': 'LPAREN',
+        ')': 'RPAREN',
+        '[': 'LBRACKET',
+        ']': 'RBRACKET',
+        '..': 'DOUBLE_DOT',
+        '<>--': 'DIAMOND_LEFT',
+        '--<>': 'DIAMOND_RIGHT',
+        '*': 'ASTERISK',
+        '@': 'AT',
+        ':': 'COLON'
+    }
