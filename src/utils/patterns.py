@@ -1,4 +1,5 @@
 import re
+from ..tokens.token_types import Token
 
 class PATTERNS:
     # Padrões regex para identificadores
@@ -13,16 +14,16 @@ class PATTERNS:
     
     # Símbolos especiais
     SYMBOLS = {
-        '{': 'LBRACE',
-        '}': 'RBRACE', 
-        '(': 'LPAREN',
-        ')': 'RPAREN',
-        '[': 'LBRACKET',
-        ']': 'RBRACKET',
-        '..': 'DOUBLE_DOT',
-        '<>--': 'DIAMOND_LEFT',
-        '--<>': 'DIAMOND_RIGHT',
-        '*': 'ASTERISK',
-        '@': 'AT',
-        ':': 'COLON'
+        '{': Token.LBRACE,
+        '}': Token.RBRACE, 
+        '(': Token.LPAREN,
+        ')': Token.RPAREN,
+        '[': Token.LBRACKET,
+        ']': Token.RBRACKET,
+        '..': Token.DOUBLE_DOT,
+        '<>--': Token.DIAMOND_LEFT,
+        '--<>': Token.DIAMOND_RIGHT,
+        '*': Token.ASTERISK,
+        '@': Token.AT,
+        ':': Token.COLON
     }
