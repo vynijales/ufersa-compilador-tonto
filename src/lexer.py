@@ -117,14 +117,14 @@ Convenção para nomes de classes: iniciando com letra maiúscula, seguida por q
 combinação de letras, ou tendo sublinhado como subcadeia própria, sem números. Exemplos:
 Person, Child, Church, University, Second_Baptist_Church.
 """
-t_CLASS_IDENTIFIER = r'[A-Z][a-z]+(_[A-Z][a-z]+)*'
+t_CLASS_IDENTIFIER = r'[A-Z][_A-Za-z]*'
 
 """
 Convenção para nomes de relações: começando com letra minúscula, seguida por qualquer
 combinação de letras, ou tendo sublinhado como subcadeia própria, sem números. Exemplos:
 has, hasParent, has_parent, isPartOf, is_part_of.
 """
-t_RELATION_IDENTIFIER = r'[a-z][a-z]*(_[a-z][a-z]*)*'
+t_RELATION_IDENTIFIER = r'[a-z]+[_a-z]*'
 
 """
 Convenção para nomes de instâncias: iniciando com qualquer letra, podendo ter o sublinhado
