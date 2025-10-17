@@ -32,8 +32,10 @@ CLASS_STEREOTYPES = [
     'quantity',
     'quality',
     'mode',
-    'intrisicMode',
+    'intrinsicMode',
     'extrinsicMode',
+    'intrinsic-mode',    # Para compatibilidade com versões antigas
+    'extrinsic-mode',    # Para compatibilidade com versões antigas
     'subkind',
     'phase',
     'role',
@@ -92,7 +94,8 @@ SYMBOLS = [
     "--<>",
     "*",
     "@",
-    ":"
+    ":",
+    '--',
 ]
 
 META_ATTRIBUTES = [
@@ -134,7 +137,7 @@ pizza03, pizza123
 t_INSTANCE_IDENTIFIER = r'[a-zA-Z][a-zA-Z_]*\d+'
 
 
-t_KEYWORD = r'|'.join(KEYWORDS)
+t_KEYWORD = r'\b({})\b'.format('|'.join(KEYWORDS))
 t_SYMBOL = r'|'.join([r'\{}'.format(sym) for sym in SYMBOLS])
 t_CLASS_STEREOTYPE = r'|'.join(CLASS_STEREOTYPES)
 t_RELATION_STEREOTYPE = r'|'.join(RELATION_STEREOTYPES)
