@@ -2,7 +2,6 @@ import os
 
 from lexer import lexer
 
-
 def parse(data):
     lexer.lineno = 1
     lexer.input(data)

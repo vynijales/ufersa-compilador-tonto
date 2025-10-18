@@ -136,6 +136,11 @@ pizza03, pizza123
 """
 t_INSTANCE_IDENTIFIER = r'[a-zA-Z][a-zA-Z_]*\d+'
 
+"""
+Novos tipos: iniciando com letra, sem números, sem sublinhado e terminando com a subcadeia
+“DataType”. Exemplo: CPFDataType, PhoneNumberDataType.
+"""
+t_USER_TYPE = r'[A-Za-z]+DataType'
 
 t_KEYWORD = r'\b({})\b'.format('|'.join(KEYWORDS))
 t_SYMBOL = r'|'.join([r'\{}'.format(sym) for sym in SYMBOLS])
