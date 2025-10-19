@@ -37,8 +37,13 @@ class LexicalAnalyzerGUI:
         ttk.Button(controls_frame, text="Abrir Pasta", command=self.open_folder).pack(side=tk.LEFT, padx=(0, 10))
         ttk.Button(controls_frame, text="Analisar Arquivo Atual", command=self.analyze_current_tab).pack(side=tk.LEFT, padx=(0, 10))
         ttk.Button(controls_frame, text="Analisar Todos", command=self.analyze_all_tabs).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(controls_frame, text="Fechar Aba Atual", command=self.close_current_tab).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(controls_frame, text="Limpar Tudo", command=self.clear_all).pack(side=tk.LEFT)
+        
+        # Botões que serão controlados
+        self.close_tab_btn = ttk.Button(controls_frame, text="Fechar Aba Atual", command=self.close_current_tab)
+        self.close_tab_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.clear_all_btn = ttk.Button(controls_frame, text="Limpar Tudo", command=self.clear_all)
+        self.clear_all_btn.pack(side=tk.LEFT)
         
         # Label do arquivo atual
         self.file_label = ttk.Label(controls_frame, text="Nenhum arquivo selecionado")
@@ -96,6 +101,21 @@ class LexicalAnalyzerGUI:
         # Bind para duplo clique na treeview
         self.tokens_tree.bind('<Double-1>', self.on_token_double_click)
         
+        # Inicializar estado dos botões
+        self.update_buttons_state()
+        
+    def update_buttons_state(self):
+        """Atualiza o estado dos botões baseado no número de abas"""
+        has_tabs = len(self.notebook.tabs()) > 0
+        
+        # Mostrar ou esconder botões
+        if has_tabs:
+            self.close_tab_btn.pack(side=tk.LEFT, padx=(0, 10))
+            self.clear_all_btn.pack(side=tk.LEFT)
+        else:
+            self.close_tab_btn.pack_forget()
+            self.clear_all_btn.pack_forget()
+    
     def create_text_tab(self, filename, content):
         """Cria uma nova aba com área de texto editável"""
         # Frame para a aba
@@ -122,6 +142,9 @@ class LexicalAnalyzerGUI:
         
         # Selecionar a nova aba
         self.notebook.select(tab_frame)
+        
+        # Atualizar estado dos botões
+        self.update_buttons_state()
         
     def get_current_tab_info(self):
         """Retorna informações da aba atual"""
@@ -275,6 +298,9 @@ class LexicalAnalyzerGUI:
             self.file_label.config(text="Nenhum arquivo selecionado")
             self.clear_tokens()
             self.update_stats("")
+        
+        # Atualizar estado dos botões
+        self.update_buttons_state()
     
     def parse(self, data):
         lexer.lineno = 1
@@ -304,19 +330,42 @@ class LexicalAnalyzerGUI:
         self.stats_text.config(state=tk.DISABLED)
     
     def on_token_double_click(self, event):
-        """Quando um token é clicado duas vezes, navega para a linha no editor atual"""
+        """Quando um token é clicado duas vezes, navega para o lexema no editor atual"""
         filename, display_name, text_area = self.get_current_tab_info()
         if not text_area:
             return
             
         item = self.tokens_tree.selection()[0]
-        line_number = self.tokens_tree.item(item, 'values')[0]
+        line_number = int(self.tokens_tree.item(item, 'values')[0])
+        token_value = self.tokens_tree.item(item, 'values')[2]
         
-        # Navegar para a linha no editor de texto atual
-        text_area.focus_set()
-        text_area.tag_remove("sel", "1.0", tk.END)
-        text_area.tag_add("sel", f"{line_number}.0", f"{line_number}.end")
-        text_area.see(f"{line_number}.0")
+        # Obter o conteúdo completo da linha
+        line_start = f"{line_number}.0"
+        line_end = f"{line_number}.end"
+        line_content = text_area.get(line_start, line_end)
+        
+        # Encontrar a posição exata do lexema na linha
+        start_pos = line_content.find(token_value)
+        
+        if start_pos != -1:
+            # Calcular as posições exatas no editor
+            lexema_start = f"{line_number}.{start_pos}"
+            lexema_end = f"{line_number}.{start_pos + len(token_value)}"
+            
+            # Navegar para o lexema no editor de texto atual
+            text_area.focus_set()
+            text_area.tag_remove("sel", "1.0", tk.END)
+            text_area.tag_add("sel", lexema_start, lexema_end)
+            text_area.see(lexema_start)
+            
+            # Opcional: destacar visualmente a seleção
+            text_area.focus_force()
+        else:
+            # Fallback: selecionar a linha inteira se não encontrar o lexema exato
+            text_area.focus_set()
+            text_area.tag_remove("sel", "1.0", tk.END)
+            text_area.tag_add("sel", line_start, line_end)
+            text_area.see(line_start)
     
     def clear_all(self):
         """Fecha todas as abas e limpa a interface"""
@@ -333,6 +382,9 @@ class LexicalAnalyzerGUI:
         self.update_stats("")
         self.file_label.config(text="Nenhum arquivo selecionado")
         self.current_file = None
+        
+        # Atualizar estado dos botões
+        self.update_buttons_state()
 
 def main():
     root = tk.Tk()
