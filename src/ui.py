@@ -19,8 +19,86 @@ class LexicalAnalyzerGUI:
         self.tabs = {}
         self.current_tokens = []
         
+        self.token_colors = {
+            'KEYWORD': 'blue',
+            
+            'CLASS_IDENTIFIER': '#ff0000',
+            'INSTANCE_IDENTIFIER': '#ff8500',
+            'RELATION_IDENTIFIER': '#ffcb00',
+
+            'CLASS_STEREOTYPE': '#800080',
+            'RELATION_STEREOTYPE': '#ff1493',
+            'META_ATTRIBUTES': '#008080',
+            "SYMBOL": '#a52a2a',
+            'NUMBER': '#ff4500',
+            
+            'NATIVE_TYPE': '#00f050',
+            'USER_TYPE': '#0050f0',
+
+            'COMMA': '#000000',
+            'COMMENT': '#444444',
+        }
+
         self.setup_ui()
         
+    def _setup_syntax_tags(self, text_widget):
+        """Configura as tags de cor para o realce de sintaxe no widget de texto."""
+        # Configuração padrão para texto sem tag (preto)
+        text_widget.tag_configure("default", foreground='black') 
+        
+        # Configurar cada tag de cor definida no dicionário
+        for token_type, color in self.token_colors.items():
+            # O nome da tag será o tipo do token
+            text_widget.tag_configure(token_type, foreground=color)
+
+    def apply_syntax_highlight(self, text_area, tokens):
+        """Aplica o realce de sintaxe com base nos tokens analisados."""
+        
+        # 1. Remover realces existentes para evitar sobreposição
+        for token_type in self.token_colors.keys():
+            text_area.tag_remove(token_type, '1.0', tk.END)
+        
+        # 2. Aplicar o realce token por token
+        for token in tokens:
+            # Obtém o tipo de token e a tag de cor correspondente
+            token_type = token.type
+            if token_type in self.token_colors:
+                
+                # O widget Text/ScrolledText usa o formato "linha.coluna" para índices.
+                # A linha começa em 1, mas a coluna começa em 0.
+                
+                # Calcula a posição inicial (start_index) e final (end_index) do lexema
+                # O atributo 'lexpos' do token (gerado pelo PLY) é o índice dentro de todo o código.
+                # Precisamos encontrar a coluna na linha.
+                
+                line_number = token.lineno
+                token_value = token.value
+                
+                # Para evitar problemas com o índice `lexpos` que é global, vamos 
+                # ler a linha e encontrar o valor do token nela (mais robusto).
+                # Se o seu lexer fornece a coluna, o cálculo é mais direto.
+                # Assumindo que você usa o 'lineno' e 'value' do token:
+                
+                line_content = text_area.get(f"{line_number}.0", f"{line_number}.end")
+                
+                try:
+                    # Encontra a coluna inicial do valor do token na linha.
+                    col_start = line_content.index(token_value)
+                except ValueError:
+                    # Se não encontrar (ex: erro na lógica do lexer ou nova linha), 
+                    # simplesmente pula este token.
+                    continue
+                
+                # Índices no formato "linha.coluna"
+                start_index = f"{line_number}.{col_start}"
+                end_index = f"{line_number}.{col_start + len(token_value)}"
+                
+                # 3. Aplicar a tag (cor)
+                text_area.tag_add(token_type, start_index, end_index)
+                
+        # 4. Certificar-se de que o default é aplicado em tudo não realçado (opcional)
+        text_area.tag_add('default', '1.0', tk.END)
+
     def setup_ui(self):
         # Configurar grid weights principal
         self.root.columnconfigure(0, weight=1)
@@ -189,8 +267,10 @@ class LexicalAnalyzerGUI:
         
         text_area = scrolledtext.ScrolledText(tab_frame, wrap=tk.WORD, font=("Courier New", 10))
         text_area.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        text_area.insert(1.0, content)
+        self._setup_syntax_tags(text_area) 
         
+        text_area.insert(1.0, content)
+
         display_name = os.path.basename(filename)
         self.notebook.add(tab_frame, text=display_name)
         
@@ -204,6 +284,38 @@ class LexicalAnalyzerGUI:
         self.notebook.select(tab_frame)
         self.update_buttons_state()
         
+    def analyze_current_tab(self):
+        """Analisa o conteúdo da aba atual"""
+        filename, display_name, text_area = self.get_current_tab_info()
+        
+        if not text_area:
+            return
+        
+        content = text_area.get(1.0, tk.END).strip()
+        if not content:
+            self.clear_analysis()
+            
+            # Limpar o realce se o conteúdo estiver vazio (opcional)
+            for token_type in self.token_colors.keys():
+                text_area.tag_remove(token_type, '1.0', tk.END)
+            text_area.tag_add('default', '1.0', tk.END)
+            
+            return
+        
+        try:
+            tokens = self.parse(content)
+            self.current_tokens = tokens
+            self.display_tokens(tokens)
+            self.update_stats(tokens, display_name)
+            self.update_chart(tokens)
+            self.update_detail_tree(tokens)
+            
+            # >>> NOVO: Aplica o realce de sintaxe
+            self.apply_syntax_highlight(text_area, tokens) 
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro durante análise: {str(e)}")
+    
     def get_current_tab_info(self):
         """Retorna informações da aba atual"""
         current_tab = self.notebook.select()
@@ -270,28 +382,6 @@ class LexicalAnalyzerGUI:
             
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao ler arquivo {file_path}: {str(e)}")
-    
-    def analyze_current_tab(self):
-        """Analisa o conteúdo da aba atual"""
-        filename, display_name, text_area = self.get_current_tab_info()
-        
-        if not text_area:
-            return
-        
-        content = text_area.get(1.0, tk.END).strip()
-        if not content:
-            self.clear_analysis()
-            return
-        
-        try:
-            tokens = self.parse(content)
-            self.current_tokens = tokens
-            self.display_tokens(tokens)
-            self.update_stats(tokens, display_name)
-            self.update_chart(tokens)
-            self.update_detail_tree(tokens)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro durante análise: {str(e)}")
     
     def analyze_all_tabs(self):
         """Analisa todos os arquivos abertos nas abas"""
