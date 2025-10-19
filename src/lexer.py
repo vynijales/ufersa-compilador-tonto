@@ -127,7 +127,7 @@ Convenção para nomes de relações: começando com letra minúscula, seguida p
 combinação de letras, ou tendo sublinhado como subcadeia própria, sem números. Exemplos:
 has, hasParent, has_parent, isPartOf, is_part_of.
 """
-t_RELATION_IDENTIFIER = r'[a-z]+[_a-z]*'
+t_RELATION_IDENTIFIER = r'[a-z]+[_a-zA-Z]*'
 
 """
 Convenção para nomes de instâncias: iniciando com qualquer letra, podendo ter o sublinhado
@@ -144,10 +144,10 @@ t_USER_TYPE = r'[A-Za-z]+DataType'
 
 t_KEYWORD = r'\b({})\b'.format('|'.join(KEYWORDS))
 t_SYMBOL = r'|'.join([r'\{}'.format(sym) for sym in SYMBOLS])
-t_CLASS_STEREOTYPE = r'|'.join(CLASS_STEREOTYPES)
-t_RELATION_STEREOTYPE = r'|'.join(RELATION_STEREOTYPES)
-t_META_ATTRIBUTES = r'|'.join(META_ATTRIBUTES)
-t_NATIVE_TYPE = r'|'.join(NATIVE_TYPES)
+t_CLASS_STEREOTYPE = r'\b({})\b'.format('|'.join(CLASS_STEREOTYPES))
+t_RELATION_STEREOTYPE = r'\b({})\b'.format('|'.join(RELATION_STEREOTYPES))
+t_META_ATTRIBUTES = r'\b({})\b'.format('|'.join(META_ATTRIBUTES))
+t_NATIVE_TYPE = r'\b({})\b'.format('|'.join(NATIVE_TYPES))
 
 t_NUMBER = r'\d+'
 t_COMMA = r','
