@@ -212,4 +212,8 @@ def tokenize(data):
     lexer.input(data)
     
     for tok in lexer:
+        # criar atributo "token_pos" para armazenar a posição do token na linha
+        tok.token_pos = tok.lexpos - data.rfind('\n', 0, tok.lexpos)
+
+        # retornar o token
         yield tok
