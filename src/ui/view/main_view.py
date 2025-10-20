@@ -1,10 +1,7 @@
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QSplitter, QTabWidget, QPushButton, QLabel, QFileDialog)
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton, QLabel, QFileDialog
 
-from PyQt5.QtCore import Qt, pyqtSignal
-
-from ui.widgets import TokenTable, StatisticsWidget, ChartWidget, TokenDetailsTable
+from ui.widgets import TokenTable, StatisticsWidget, ChartWidget, CloseableTabWidget, TokenDetailsTable
 
 class MainView(QMainWindow):
     analyzeCurrentRequested = pyqtSignal()
@@ -46,7 +43,9 @@ class MainView(QMainWindow):
         self.analyze_current_btn = QPushButton("Analisar Arquivo Atual")
         self.analyze_all_btn = QPushButton("Analisar Todos")
         self.close_tab_btn = QPushButton("Fechar Aba Atual")
+        self.close_tab_btn.setEnabled(False)
         self.clear_all_btn = QPushButton("Limpar Tudo")
+        self.clear_all_btn.setEnabled(False)
         self.file_label = QLabel("Nenhum arquivo selecionado")
 
         controls_layout.addWidget(self.open_file_btn)
@@ -58,7 +57,7 @@ class MainView(QMainWindow):
         controls_layout.addStretch()
         controls_layout.addWidget(self.file_label)
 
-        self.tab_widget = QTabWidget()
+        self.tab_widget = CloseableTabWidget(close_callback=self.on_tab_closed)
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
 
         layout.addLayout(controls_layout)
@@ -135,6 +134,15 @@ class MainView(QMainWindow):
             self.analyzeCurrentRequested.emit()
         else:
             self.file_label.setText("Nenhum arquivo selecionado")
+
+    def on_tab_closed(self, index):
+        """Callback chamado quando uma aba é fechada via botão de fechar"""
+        if index >= 0:
+            filename = self.tab_widget.tabText(index)
+            self.tab_widget.removeTab(index)
+            if filename:
+                self.tabClosed.emit(filename)
+            self.update_buttons_state()
 
     def update_buttons_state(self):
         has_tabs = self.tab_widget.count() > 0
