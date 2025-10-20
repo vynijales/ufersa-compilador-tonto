@@ -4,8 +4,6 @@ import collections
 from PyQt5.QtCore import QDir
 from PyQt5.QtWidgets import QApplication, QTreeWidgetItem, QMessageBox
 
-import matplotlib.pyplot as plt
-
 from ui.controller import FilesHandler
 from ui.widgets import FileTab, FileTreeWidget
 from ui.view import MainView
@@ -32,15 +30,12 @@ class MainController:
     def setup_file_tree(self):
         """Configura o file tree widget na interface"""
         # Adicionar file tree ao painel esquerdo
-        self.file_tree = FileTreeWidget()
-        self.file_tree.fileDoubleClicked.connect(self.open_file)
-        self.file_tree.folderDoubleClicked.connect(self.on_folder_double_clicked)
+        self.view.file_tree.fileDoubleClicked.connect(self.open_file)
+        self.view.file_tree.folderDoubleClicked.connect(self.on_folder_double_clicked)
         
         # Inserir o file tree no layout do painel esquerdo
-        self.view.left_layout.insertWidget(0, self.file_tree)
-        
-        # Ajustar o splitter para dar mais espaço para o file tree
-        self.view.main_splitter.setSizes([300, 500])
+        self.view.left_layout.insertWidget(0, self.view.file_tree)
+
 
     def on_folder_double_clicked(self, folder_path):
         """Manipula duplo clique em pastas - expande/contrai na árvore"""
@@ -70,7 +65,7 @@ class MainController:
                 self.view.add_file_tab(file_tab)
                 
                 # Não alterar o root path do file tree, apenas garantir que está atualizado
-                self.file_tree.refresh()
+                self.view.file_tree.refresh()
             else:
                 self.select_existing_tab(filename)
 
@@ -81,7 +76,7 @@ class MainController:
     def open_folder(self, folder_path):
         try:
             # Atualizar o file tree para mostrar a pasta selecionada como raiz
-            self.file_tree.set_root_path(folder_path)
+            self.view.file_tree.set_root_path(folder_path)
             
             # Buscar todos os arquivos .tonto recursivamente
             tonto_files = []
@@ -141,7 +136,7 @@ class MainController:
                 self.files_handler.remove_file(filepath)
                 break
         # Atualizar o file tree para refletir as mudanças
-        self.file_tree.refresh()
+        self.view.file_tree.refresh()
 
     def analyze_current_file(self):
         current_index = self.view.tab_widget.currentIndex()
@@ -202,27 +197,26 @@ class MainController:
         self.view.stats_widget.setText(stats_text)
 
     def update_chart(self, tokens):
-        self.view.chart_widget.ax.clear()
+        pass
+        # if not tokens:
+        #     self.view.chart_widget.ax.text(0.5, 0.5, 'Nenhum dado\npara exibir',
+        #                                    horizontalalignment='center', verticalalignment='center',
+        #                                    transform=self.view.chart_widget.ax.transAxes,
+        #                                    fontsize=12, color='gray')
+        #     self.view.chart_widget.ax.set_facecolor('#f0f0f0')
+        # else:
+        #     token_counts = collections.Counter(token.type for token in tokens)
+        #     labels = [
+        #         f"{token_type}\n({count})" for token_type, count in token_counts.most_common()]
+        #     sizes = list(token_counts.values())
 
-        if not tokens:
-            self.view.chart_widget.ax.text(0.5, 0.5, 'Nenhum dado\npara exibir',
-                                           horizontalalignment='center', verticalalignment='center',
-                                           transform=self.view.chart_widget.ax.transAxes,
-                                           fontsize=12, color='gray')
-            self.view.chart_widget.ax.set_facecolor('#f0f0f0')
-        else:
-            token_counts = collections.Counter(token.type for token in tokens)
-            labels = [
-                f"{token_type}\n({count})" for token_type, count in token_counts.most_common()]
-            sizes = list(token_counts.values())
+        #     colors = plt.cm.Pastel1(range(len(labels)))
+        #     self.view.chart_widget.ax.pie(sizes, labels=labels, autopct='%1.1f%%',
+        #                                   startangle=90, colors=colors, textprops={'fontsize': 8})
 
-            colors = plt.cm.Pastel1(range(len(labels)))
-            self.view.chart_widget.ax.pie(sizes, labels=labels, autopct='%1.1f%%',
-                                          startangle=90, colors=colors, textprops={'fontsize': 8})
-
-        self.view.chart_widget.ax.set_title(
-            'Distribuição de Tokens', pad=20, fontweight='bold')
-        self.view.chart_widget.draw()
+        # self.view.chart_widget.ax.set_title(
+        #     'Distribuição de Tokens', pad=20, fontweight='bold')
+        # self.view.chart_widget.draw()
 
     def update_details_table(self, tokens):
         self.view.details_table.clear()
@@ -263,7 +257,7 @@ class MainController:
         self.view.clear_all_tabs()
         self.update_display([], "")
         # Restaurar file tree para diretório atual
-        self.file_tree.set_root_path(QDir.currentPath())
+        self.view.file_tree.set_root_path(QDir.currentPath())
 
     def run(self):
         return self.app.exec_()
