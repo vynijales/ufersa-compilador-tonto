@@ -21,7 +21,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             # Quase Branco (Texto Principal)
             'COMMA': QColor('#F8F8F2'),
             'COMMENT': QColor('#75715E'),               # Cinza Esverdeado
-            'ERROR': QColor('#FF2050'),                 # Vermelho Forte
+            'ERROR': QColor('#FF8077'),                 # Vermelho Forte
         }
 
         for s in SYMBOLS.keys():
@@ -41,6 +41,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             if token.type == 'ERROR':
                 format = QTextCharFormat()
                 format.setForeground(self.token_colors['ERROR'])
+                format.setBackground(QColor('#8E3030'))
                 format.setUnderlineColor(QColor(self.token_colors['ERROR']))
                 format.setUnderlineStyle(QTextCharFormat.SpellCheckUnderline)
                 format.setFontWeight(100)
