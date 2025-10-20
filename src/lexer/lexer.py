@@ -17,6 +17,7 @@ tokens = (
 
     'NUMBER',
     'COMMA',
+    'DOT',
 
     'OPEN_PAREN',
     'CLOSE_PAREN',
@@ -142,15 +143,18 @@ NATIVE_TYPES = [
 ]
 
 """
-Formato para nomes de pacotes: iniciando com letra Maiúscula, podendo conter letras minúsculas,
+Formato para nomes de pacotes: iniciando com letra Maiúscula ou minuscula, podendo conter letras minúsculas,
 e tendo sublinhado como subcadeia própria, sem números. Pode conter múltiplos níveis separados por ponto.
 Devendo ser terminado com a subcadeia "Package".
+Também pode ser uma string qualquer.
 Exemplos:
     LivingThings.HumanPackage
     Geography.PlanetPackage
     Company.Department.SubDepartmentPackage
+    "
 """
-t_PACKAGE_IDENTIFIER = r'([A-Z][a-zA-Z]*(_[A-Za-z]+)*\.)*([A-Z][a-zA-Z]*(_[A-Za-z]+)*)Package'
+# t_PACKAGE_IDENTIFIER = r"([a-zA-Z][a-zA-Z_\.]*Package)|(\"[^\"]+\")"
+t_PACKAGE_IDENTIFIER = r"(\".+\")|((?:[a-zA-Z][a-zA-Z_]*\.)*[a-zA-Z][a-zA-Z_]*Package)"
 
 """
 Convenção para nomes de classes: iniciando com letra maiúscula, seguida por qualquer
@@ -210,6 +214,7 @@ t_MULTIPLICATION = r'\*'
 t_AT = r'@'
 t_COLON = r':'
 t_COMMA = r','
+t_DOT = r'\.'
 
 # Define a rule so we can track line numbers
 def t_newline(t):
@@ -234,9 +239,13 @@ lexer = lex.lex()
 
 
 def preprocess_input(data):
+    
     # Remove comentários substituindo-os por espaços em branco para manter a contagem correta de linhas
-    data = re.sub(r'//[^\n]*', '', data)          # Comentários de uma linha
-
+    # OBS: Ignorar // dentro de strings
+    data = re.sub(r'(\".*?\"|\'.*?\')|//.*', 
+                  lambda m: m.group(1) if m.group(1) else '\n' * m.group(0).count('\n'), 
+                  data)
+    
     # Comentários multilinha
     multiline_comment_pattern = r'/\*.*?\*/'  
     multiline_comments = re.findall(multiline_comment_pattern, data, re.DOTALL)
