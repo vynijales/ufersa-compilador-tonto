@@ -1,5 +1,6 @@
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton, QLabel, QFileDialog
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                             QSplitter, QPushButton, QLabel, QFileDialog)
 
 from ui.widgets import TokenTable, StatisticsWidget, ChartWidget, CloseableTabWidget, TokenDetailsTable
 
@@ -22,47 +23,65 @@ class MainView(QMainWindow):
         self.setCentralWidget(central_widget)
 
         main_layout = QHBoxLayout(central_widget)
-        splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter = QSplitter(Qt.Horizontal)
 
         left_widget = self.create_left_panel()
         right_widget = self.create_right_panel()
 
-        splitter.addWidget(left_widget)
-        splitter.addWidget(right_widget)
-        splitter.setSizes([800, 800])
+        self.main_splitter.addWidget(left_widget)
+        self.main_splitter.addWidget(right_widget)
+        self.main_splitter.setSizes([400, 600])
 
-        main_layout.addWidget(splitter)
+        main_layout.addWidget(self.main_splitter)
 
     def create_left_panel(self):
         widget = QWidget()
-        layout = QVBoxLayout(widget)
+        self.left_layout = QVBoxLayout(widget)
 
-        controls_layout = QHBoxLayout()
+        # Área de controles
+        controls_widget = QWidget()
+        controls_layout = QVBoxLayout(controls_widget)
+        
+        file_controls_layout = QHBoxLayout()
         self.open_file_btn = QPushButton("Abrir Arquivo")
         self.open_folder_btn = QPushButton("Abrir Pasta")
-        self.analyze_current_btn = QPushButton("Analisar Arquivo Atual")
+        
+        file_controls_layout.addWidget(self.open_file_btn)
+        file_controls_layout.addWidget(self.open_folder_btn)
+        
+        analysis_controls_layout = QHBoxLayout()
+        self.analyze_current_btn = QPushButton("Analisar Atual")
         self.analyze_all_btn = QPushButton("Analisar Todos")
-        self.close_tab_btn = QPushButton("Fechar Aba Atual")
+        
+        analysis_controls_layout.addWidget(self.analyze_current_btn)
+        analysis_controls_layout.addWidget(self.analyze_all_btn)
+        
+        management_controls_layout = QHBoxLayout()
+        self.close_tab_btn = QPushButton("Fechar Aba")
         self.close_tab_btn.setEnabled(False)
         self.clear_all_btn = QPushButton("Limpar Tudo")
         self.clear_all_btn.setEnabled(False)
+        
+        management_controls_layout.addWidget(self.close_tab_btn)
+        management_controls_layout.addWidget(self.clear_all_btn)
+        
+        controls_layout.addLayout(file_controls_layout)
+        controls_layout.addLayout(analysis_controls_layout)
+        controls_layout.addLayout(management_controls_layout)
+        
         self.file_label = QLabel("Nenhum arquivo selecionado")
-
-        controls_layout.addWidget(self.open_file_btn)
-        controls_layout.addWidget(self.open_folder_btn)
-        controls_layout.addWidget(self.analyze_current_btn)
-        controls_layout.addWidget(self.analyze_all_btn)
-        controls_layout.addWidget(self.close_tab_btn)
-        controls_layout.addWidget(self.clear_all_btn)
-        controls_layout.addStretch()
         controls_layout.addWidget(self.file_label)
 
+        # Área do file tree será adicionada pelo controller
+        self.left_layout.addWidget(controls_widget)
+
+        # Área de abas
         self.tab_widget = CloseableTabWidget(close_callback=self.on_tab_closed)
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
+        self.left_layout.addWidget(QLabel("Arquivos Abertos:"))
+        self.left_layout.addWidget(self.tab_widget)
 
-        layout.addLayout(controls_layout)
-        layout.addWidget(self.tab_widget)
-
+        # Conectar sinais
         self.open_file_btn.clicked.connect(self.open_file_dialog)
         self.open_folder_btn.clicked.connect(self.open_folder_dialog)
         self.analyze_current_btn.clicked.connect(

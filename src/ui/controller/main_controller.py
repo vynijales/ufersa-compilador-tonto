@@ -1,12 +1,13 @@
 import os
 import collections
 
-from PyQt5.QtWidgets import (QApplication, QTreeWidgetItem, QMessageBox)
+from PyQt5.QtCore import QDir
+from PyQt5.QtWidgets import QApplication, QTreeWidgetItem, QMessageBox
 
 import matplotlib.pyplot as plt
 
 from ui.controller import FilesHandler
-from ui.widgets import FileTab
+from ui.widgets import FileTab, FileTreeWidget
 from ui.view import MainView
 
 class MainController:
@@ -16,6 +17,7 @@ class MainController:
         self.view = MainView()
 
         self.setup_connections()
+        self.setup_file_tree()
         self.view.show()
 
     def setup_connections(self):
@@ -27,8 +29,38 @@ class MainController:
         self.view.allCleared.connect(self.clear_all)
         self.view.token_table.tokenDoubleClicked.connect(self.navigate_to_token)
 
+    def setup_file_tree(self):
+        """Configura o file tree widget na interface"""
+        # Adicionar file tree ao painel esquerdo
+        self.file_tree = FileTreeWidget()
+        self.file_tree.fileDoubleClicked.connect(self.open_file)
+        self.file_tree.folderDoubleClicked.connect(self.on_folder_double_clicked)
+        
+        # Inserir o file tree no layout do painel esquerdo
+        self.view.left_layout.insertWidget(0, self.file_tree)
+        
+        # Ajustar o splitter para dar mais espaço para o file tree
+        self.view.main_splitter.setSizes([300, 500])
+
+    def on_folder_double_clicked(self, folder_path):
+        """Manipula duplo clique em pastas - expande/contrai na árvore"""
+        # A expansão/contração já é tratada no próprio FileTreeWidget
+        pass
+
     def open_file(self, filename):
+
+        filename = os.path.normpath(filename) # Padronizar o caminho usando /
+
         try:
+            # Verificar se é um arquivo .tonto
+            if not filename.endswith('.tonto'):
+                if os.path.isfile(filename):
+                    QMessageBox.information(
+                        self.view, "Informação", 
+                        "Apenas arquivos .tonto são suportados."
+                    )
+                return
+
             with open(filename, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -36,6 +68,9 @@ class MainController:
                 file_tab = FileTab(filename, content)
                 self.files_handler.add_file(filename, file_tab)
                 self.view.add_file_tab(file_tab)
+                
+                # Não alterar o root path do file tree, apenas garantir que está atualizado
+                self.file_tree.refresh()
             else:
                 self.select_existing_tab(filename)
 
@@ -44,22 +79,53 @@ class MainController:
                 self.view, "Erro", f"Erro ao ler arquivo: {str(e)}")
 
     def open_folder(self, folder_path):
-        tonto_files = []
-        for root, _, files in os.walk(folder_path):
-            for file in files:
-                if file.endswith('.tonto'):
-                    tonto_files.append(os.path.join(root, file))
+        try:
+            # Atualizar o file tree para mostrar a pasta selecionada como raiz
+            self.file_tree.set_root_path(folder_path)
+            
+            # Buscar todos os arquivos .tonto recursivamente
+            tonto_files = []
+            for root, _, files in os.walk(folder_path):
+                for file in files:
+                    if file.endswith('.tonto'):
+                        full_path = os.path.join(root, file)
+                        full_path = os.path.normpath(full_path) # Padronizar o caminho usando /
+                        tonto_files.append(full_path)
+                        
+                        # Abrir cada arquivo .tonto encontrado
+                        self.open_single_file(full_path)
 
-        if not tonto_files:
+            if not tonto_files:
+                QMessageBox.information(
+                    self.view, "Informação", 
+                    f"Nenhum arquivo .tonto encontrado em: {folder_path}"
+                )
+                return
+
             QMessageBox.information(
-                self.view, "Informação", "Nenhum arquivo .tonto encontrado.")
-            return
+                self.view, "Sucesso",
+                f"Carregados {len(tonto_files)} arquivos .tonto da pasta."
+            )
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self.view, "Erro", 
+                f"Erro ao abrir pasta: {str(e)}"
+            )
 
-        for file_path in tonto_files:
-            self.open_file(file_path)
+    def open_single_file(self, file_path):
+        """Abre um único arquivo sem mostrar múltiplas mensagens"""
+        try:
+            if file_path not in self.files_handler.files:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
 
-        QMessageBox.information(self.view, "Sucesso",
-                                f"Carregados {len(tonto_files)} arquivos.")
+                file_tab = FileTab(file_path, content)
+                self.files_handler.add_file(file_path, file_tab)
+                self.view.add_file_tab(file_tab)
+                
+        except Exception as e:
+            print(f"Erro ao abrir arquivo {file_path}: {str(e)}")
 
     def select_existing_tab(self, filename):
         display_name = os.path.basename(filename)
@@ -74,6 +140,8 @@ class MainController:
             if file_tab.display_name == display_name:
                 self.files_handler.remove_file(filepath)
                 break
+        # Atualizar o file tree para refletir as mudanças
+        self.file_tree.refresh()
 
     def analyze_current_file(self):
         current_index = self.view.tab_widget.currentIndex()
@@ -194,6 +262,8 @@ class MainController:
         self.files_handler.clear_files()
         self.view.clear_all_tabs()
         self.update_display([], "")
+        # Restaurar file tree para diretório atual
+        self.file_tree.set_root_path(QDir.currentPath())
 
     def run(self):
         return self.app.exec_()
