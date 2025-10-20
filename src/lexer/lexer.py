@@ -7,6 +7,7 @@ tokens = (
     'KEYWORD',
     'SYMBOL',
 
+    'PACKAGE_IDENTIFIER',
     'CLASS_IDENTIFIER',
     'RELATION_IDENTIFIER',
     'INSTANCE_IDENTIFIER',
@@ -117,29 +118,45 @@ NATIVE_TYPES = [
 ]
 
 """
+Formato para nomes de pacotes: iniciando com letra Maiúscula, podendo conter letras minúsculas,
+e tendo sublinhado como subcadeia própria, sem números. Pode conter múltiplos níveis separados por ponto.
+Devendo ser terminado com a subcadeia "Package".
+Exemplos:
+    LivingThings.HumanPackage
+    Geography.PlanetPackage
+    Company.Department.SubDepartmentPackage
+"""
+t_PACKAGE_IDENTIFIER = r'([A-Z][a-zA-Z]*(_[A-Za-z]+)*\.)*([A-Z][a-zA-Z]*(_[A-Za-z]+)*)Package'
+
+"""
 Convenção para nomes de classes: iniciando com letra maiúscula, seguida por qualquer
-combinação de letras, ou tendo sublinhado como subcadeia própria, sem números. Exemplos:
-Person, Child, Church, University, Second_Baptist_Church.
+combinação de letras, ou tendo sublinhado como subcadeia própria, sem números.
+Exemplos:
+    Person, Child, Church, University, Second_Baptist_Church.
 """
 t_CLASS_IDENTIFIER = r'[A-Z][_A-Za-z]*'
 
 """
 Convenção para nomes de relações: começando com letra minúscula, seguida por qualquer
-combinação de letras, ou tendo sublinhado como subcadeia própria, sem números. Exemplos:
-has, hasParent, has_parent, isPartOf, is_part_of.
+combinação de letras, ou tendo sublinhado como subcadeia própria, sem números.
+Exemplos:
+    has, hasParent, has_parent, isPartOf, is_part_of.
 """
 t_RELATION_IDENTIFIER = r'[a-z]+[_a-zA-Z]*'
 
 """
 Convenção para nomes de instâncias: iniciando com qualquer letra, podendo ter o sublinhado
-como subcadeia própria e terminando com algum número inteiro. Exemplos: Planeta1, Planeta2,
-pizza03, pizza123
+como subcadeia própria e terminando com algum número inteiro.
+Exemplos:
+    Planeta1, Planeta2, pizza03, pizza123
 """
 t_INSTANCE_IDENTIFIER = r'[a-zA-Z][a-zA-Z_]*\d+'
 
 """
 Novos tipos: iniciando com letra, sem números, sem sublinhado e terminando com a subcadeia
-“DataType”. Exemplo: CPFDataType, PhoneNumberDataType.
+“DataType”. 
+Exemplo: 
+    CPFDataType, PhoneNumberDataType.
 """
 t_USER_TYPE = r'[A-Za-z]+DataType'
 
