@@ -223,7 +223,10 @@ t_ignore  = ' \t'
 # Error handling rule
 def t_error(t):
     print(f"Illegal character '{t.value[0]}', Line: {t.lexer.lineno}")
+    t.type = 'ERROR'
+    t.value = t.value[0]
     t.lexer.skip(1)
+    return t
 
 
 # Build the lexer
