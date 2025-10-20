@@ -5,7 +5,6 @@ tokens = (
     'CLASS_STEREOTYPE',
     'RELATION_STEREOTYPE',
     'KEYWORD',
-    'SYMBOL',
 
     'PACKAGE_IDENTIFIER',
     'CLASS_IDENTIFIER',
@@ -18,6 +17,23 @@ tokens = (
 
     'NUMBER',
     'COMMA',
+
+    'OPEN_PAREN',
+    'CLOSE_PAREN',
+    'OPEN_BRACKET',
+    'CLOSE_BRACKET',
+    'OPEN_BRACE',
+    'CLOSE_BRACE',
+    'RANGE',
+    'MULTIPLICATION',
+    'AT',
+    'COLON',
+    
+    'AGGREGATION',
+    'AGGREGATION_INVERSE',
+    'COMPOSITION',
+    'COMPOSITION_INVERSE',
+    'DOUBLE_DASH',
 )
 
 CLASS_STEREOTYPES = [
@@ -88,21 +104,25 @@ KEYWORDS = [
     "functional-complexes",
 ]
 
-SYMBOLS = [
-    "{",
-    "}",
-    "(",
-    ")",
-    "[",
-    "]",
-    "..",
-    "<>--",
-    "--<>",
-    "*",
-    "@",
-    ":",
-    '--',
-]
+SYMBOLS = {
+    'OPEN_PAREN':'(',
+    'CLOSE_PAREN':')',
+    'OPEN_BRACKET':'[',
+    'CLOSE_BRACKET':']',
+    'OPEN_BRACE':'{',
+    'CLOSE_BRACE':'}',
+    'RANGE':'..',
+    
+    'AGGREGATION':'<>--',
+    'AGGREGATION_INVERSE':'--<>',
+    'COMPOSITION': '<o>--',
+    'COMPOSITION_INVERSE':'--<o>',
+    'DOUBLE_DASH':'--',
+
+    'MULTIPLICATION':'*',
+    'AT':'@',
+    'COLON':':',
+}
 
 META_ATTRIBUTES = [
     "ordered",
@@ -165,13 +185,30 @@ Exemplo:
 t_USER_TYPE = r'[A-Za-z]+DataType'
 
 t_KEYWORD = r'\b({})\b'.format('|'.join(KEYWORDS))
-t_SYMBOL = r'|'.join([r'\{}'.format(sym) for sym in SYMBOLS])
 t_CLASS_STEREOTYPE = r'\b({})\b'.format('|'.join(CLASS_STEREOTYPES))
 t_RELATION_STEREOTYPE = r'\b({})\b'.format('|'.join(RELATION_STEREOTYPES))
 t_META_ATTRIBUTES = r'\b({})\b'.format('|'.join(META_ATTRIBUTES))
 t_NATIVE_TYPE = r'\b({})\b'.format('|'.join(NATIVE_TYPES))
 
 t_NUMBER = r'\d+'
+
+t_OPEN_PAREN = r'\('
+t_CLOSE_PAREN = r'\)'
+t_OPEN_BRACKET = r'\['
+t_CLOSE_BRACKET = r'\]'
+t_OPEN_BRACE = r'\{'
+t_CLOSE_BRACE = r'\}'
+t_RANGE = r'\.\.'
+
+t_DOUBLE_DASH = r'--'
+t_AGGREGATION = r'<>--'
+t_AGGREGATION_INVERSE = r'--<>'
+t_COMPOSITION = r'<o>--'
+t_COMPOSITION_INVERSE = r'--<o>'
+
+t_MULTIPLICATION = r'\*'
+t_AT = r'@'
+t_COLON = r':'
 t_COMMA = r','
 
 # Define a rule so we can track line numbers
@@ -181,6 +218,7 @@ def t_newline(t):
 
 # A string containing ignored characters (spaces and tabs)
 t_ignore  = ' \t'
+
 
 # Error handling rule
 def t_error(t):
