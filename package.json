@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "tonto-cli": "^0.4.0",
-    "tonto-package-manager": "^0.2.9"
-  }
-}
