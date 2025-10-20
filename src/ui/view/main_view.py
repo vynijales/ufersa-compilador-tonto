@@ -19,12 +19,102 @@ class MainView(QMainWindow):
         self.setGeometry(100, 100, 1600, 900)
         self.setup_ui()
 
+        # Definir tema escuro
+        self.setStyleSheet("""
+            QFileDialog {
+                background-color: #2b2b2b;
+                color: #ffffff;
+            }
+            QFileDialog QLabel {
+                color: #ffffff;
+            }
+            QFileDialog QPushButton {
+                background-color: #3c3f41;
+                color: #ffffff;
+            }
+            QMainWindow {
+                background-color: #2b2b2b;
+                /* color: #ffffff;*/
+            }
+            QLabel, QTreeWidget, QMenuBar, QMenu, QAction, QPushButton {
+                color: #ffffff;
+            }
+            QTreeWidget {
+                background-color: #3c3f41;
+            }
+            QHeaderView::section {
+                background-color: #4b4b4b;
+                color: #ffffff;
+            }
+            QTabBar::tab {
+                background: #3c3f41;
+                color: #ffffff;
+                padding: 5px;
+            }
+            QTabBar::tab:selected {
+                background: #505357;
+            }
+            QSplitter::handle {
+                background-color: rgba(0, 0, 0, 20%);
+            }
+            QSplitter::handle:hover {
+                background-color: #4020FF;
+            }
+            QTextEdit {
+                background-color: #3c3f41;
+                color: #ffffff;
+            }
+            QScrollBar {
+                background-color: #2b2b2b;
+            }
+            QScrollBar::handle {
+                background-color: #505357;
+            }
+            QScrollBar::handle:hover {
+                background-color: #4020FF;
+            }
+            QMenuBar {
+                background-color: #2b2b2b;
+            }
+            QMenu {
+                background-color: #3c3f41;
+            }
+            QMenu::item:selected {
+                background-color: #4020FF;
+            }
+            QTabWidget::pane {
+                border-top: 2px solid #4020FF;
+            }
+            QFileSystemModel {
+                background-color: #3c3f41;
+                color: #ffffff;
+            }
+            QTreeView {
+                background-color: #3c3f41;
+                color: #ffffff;
+            }
+        """)
+
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
         self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter.setHandleWidth(8)
+        
+        # Alterar cursor do mouse quando sobre o splitter
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: rgba(0, 0, 0, 20%);
+            }
+            QSplitter::handle:hover {
+                width: 8px;
+                background-color: #4020FF;
+            }
+        """)
 
         left_widget = self.create_left_panel()
         middle_widget = self.create_middle_panel()
@@ -88,6 +178,7 @@ class MainView(QMainWindow):
         widget = QWidget()
         self.left_layout = QVBoxLayout(widget)
         self.left_layout.addWidget(QLabel("Árvore de Arquivos"))
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
         widget.setMaximumWidth(300)
 
         # Área do file tree
@@ -98,6 +189,7 @@ class MainView(QMainWindow):
     def create_middle_panel(self):
         widget = QWidget()
         self.middle_layout = QVBoxLayout(widget)
+        self.middle_layout.setContentsMargins(0, 0, 0, 0)
 
         # Área de abas
         self.tab_widget = CloseableTabWidget(close_callback=self.on_tab_closed)
@@ -109,6 +201,8 @@ class MainView(QMainWindow):
     def create_right_panel(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         widget.setMaximumWidth(500)
         widget.setMinimumWidth(300)
 
