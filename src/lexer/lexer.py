@@ -1,4 +1,5 @@
 from ply import lex
+import re
 
 tokens = (
     'CLASS_STEREOTYPE',
@@ -158,7 +159,7 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 # A string containing ignored characters (spaces and tabs)
-t_ignore  = ' \t'
+t_ignore  = '\t'
 
 # Error handling rule
 def t_error(t):
@@ -168,3 +169,26 @@ def t_error(t):
 
 # Build the lexer
 lexer = lex.lex()
+
+
+def preprocess_input(data):
+    # Remove comentários substituindo-os por espaços em branco para manter a contagem correta de linhas
+    data = re.sub(r'//[^\n]*', '', data)          # Comentários de uma linha
+
+    # Comentários multilinha
+    multiline_comment_pattern = r'/\*.*?\*/'  
+    multiline_comments = re.findall(multiline_comment_pattern, data, re.DOTALL)
+    for comment in multiline_comments:
+        num_newlines = comment.count('\n')
+        data = data.replace(comment, '\n' * num_newlines)
+    
+    return data 
+
+def tokenize(data):
+    data = preprocess_input(data)
+
+    lexer.lineno = 1
+    lexer.input(data)
+    
+    for tok in lexer:
+        yield tok

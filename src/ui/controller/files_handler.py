@@ -1,5 +1,5 @@
 
-from lexer.lexer import lexer
+from lexer.lexer import tokenize
 
 class FilesHandler:
     def __init__(self):
@@ -38,6 +38,4 @@ class FilesHandler:
         return all_tokens
 
     def parse(self, data):
-        lexer.lineno = 1
-        lexer.input(data)
-        return list(iter(lexer.token, None))
+        return list(tokenize(data))
