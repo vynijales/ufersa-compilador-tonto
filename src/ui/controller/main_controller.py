@@ -159,8 +159,7 @@ class MainController:
 
     def analyze_all_files(self):
         tokens = self.files_handler.analyze_all_files()
-        self.update_display(
-            tokens, f"Todos os {len(self.files_handler.files)} arquivos")
+        self.update_display(tokens, f"Todos os {len(self.files_handler.files)} arquivos")
 
         for file_tab in self.files_handler.files.values():
             file_tab.editor.highlighter.set_tokens(file_tab.tokens)
@@ -175,8 +174,7 @@ class MainController:
     def update_token_table(self, tokens):
         self.view.token_table.clear()
         for token in tokens:
-            item = QTreeWidgetItem(
-                [str(token.lineno), token.type, token.value])
+            item = QTreeWidgetItem([str(token.lineno), str(token.token_pos), token.type, token.value])
             self.view.token_table.addTopLevelItem(item)
 
     def update_statistics(self, tokens, source_name):
@@ -231,7 +229,7 @@ class MainController:
                     [token_type, str(count), f"{percentage:.1f}%"])
                 self.view.details_table.addTopLevelItem(item)
 
-    def navigate_to_token(self, line_number, token_value):
+    def navigate_to_token(self, line_number, token_pos, token_value):
         current_editor = self.view.tab_widget.currentWidget()
         if not current_editor:
             return
@@ -241,16 +239,11 @@ class MainController:
 
         for _ in range(line_number - 1):
             cursor.movePosition(cursor.Down)
-
-        line_text = cursor.block().text()
-        start_pos = line_text.find(token_value)
-
-        if start_pos != -1:
-            cursor.setPosition(cursor.block().position() + start_pos)
-            cursor.setPosition(cursor.block().position() +
-                               start_pos + len(token_value), cursor.KeepAnchor)
-            current_editor.setTextCursor(cursor)
-            current_editor.setFocus()
+    
+        cursor.setPosition(cursor.block().position() + token_pos - 1)
+        cursor.setPosition(cursor.block().position() + token_pos - 1 + len(token_value), cursor.KeepAnchor)
+        current_editor.setTextCursor(cursor)
+        current_editor.setFocus()
 
     def clear_all(self):
         self.files_handler.clear_files()

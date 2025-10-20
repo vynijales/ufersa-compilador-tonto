@@ -1,6 +1,7 @@
 from PyQt5.QtGui import QTextCharFormat, QColor, QSyntaxHighlighter
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+
 class SyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,6 +34,6 @@ class SyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text):
         for token, format in self.highlighting_rules:
             if token.lineno == self.currentBlock().blockNumber() + 1:
-                start = text.find(token.value)
+                start = token.token_pos - 1
                 if start >= 0:
                     self.setFormat(start, len(token.value), format)
