@@ -36,12 +36,16 @@ CLASS_STEREOTYPES = [
     'mode',
     'intrinsicMode',
     'extrinsicMode',
-    'intrinsic-mode',    # Para compatibilidade com versões antigas
-    'extrinsic-mode',    # Para compatibilidade com versões antigas
     'subkind',
     'phase',
     'role',
     'historicalRole',
+
+    # Para compatibilidade com versões antigas
+    'intrinsic-modes',
+    'extrinsic-modes',  
+    'intrinsic-mode',
+    'extrinsic-mode',
 ]
 
 RELATION_STEREOTYPES = [
