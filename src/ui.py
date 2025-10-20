@@ -1,615 +1,481 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
 import os
-from lexer import lexer
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 import collections
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                             QSplitter, QTabWidget, QTextEdit, QTreeWidget, QTreeWidgetItem,
+                             QPushButton, QLabel, QFileDialog, QMessageBox, QScrollArea)
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QTextCharFormat, QColor, QFont, QSyntaxHighlighter
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from lexer import lexer
 
-class LexicalAnalyzerGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Analisador Léxico - Tonto Language")
-        self.root.geometry("1600x900")
-        
-        # Variáveis
-        self.current_file = None
-        self.open_files = {}
-        self.tabs = {}
-        self.current_tokens = []
-        
+
+class SyntaxHighlighter(QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.token_colors = {
-            'KEYWORD': 'blue',
-            
-            'CLASS_IDENTIFIER': '#ff0000',
-            'INSTANCE_IDENTIFIER': '#ff8500',
-            'RELATION_IDENTIFIER': '#ffcb00',
-
-            'CLASS_STEREOTYPE': '#800080',
-            'RELATION_STEREOTYPE': '#ff1493',
-            'META_ATTRIBUTES': '#008080',
-            "SYMBOL": '#a52a2a',
-            'NUMBER': '#ff4500',
-            
-            'NATIVE_TYPE': '#00f050',
-            'USER_TYPE': '#0050f0',
-
-            'COMMA': '#000000',
-            'COMMENT': '#444444',
+            'KEYWORD': QColor('blue'),
+            'CLASS_IDENTIFIER': QColor('#ff0000'),
+            'INSTANCE_IDENTIFIER': QColor('#ff8500'),
+            'RELATION_IDENTIFIER': QColor('#ffcb00'),
+            'CLASS_STEREOTYPE': QColor('#800080'),
+            'RELATION_STEREOTYPE': QColor('#ff1493'),
+            'META_ATTRIBUTES': QColor('#008080'),
+            "SYMBOL": QColor('#a52a2a'),
+            'NUMBER': QColor('#ff4500'),
+            'NATIVE_TYPE': QColor('#00f050'),
+            'USER_TYPE': QColor('#0050f0'),
+            'COMMA': QColor('#000000'),
+            'COMMENT': QColor('#444444'),
         }
+        self.highlighting_rules = []
 
-        self.setup_ui()
-        
-    def _setup_syntax_tags(self, text_widget):
-        """Configura as tags de cor para o realce de sintaxe no widget de texto."""
-        # Configuração padrão para texto sem tag (preto)
-        text_widget.tag_configure("default", foreground='black') 
-        
-        # Configurar cada tag de cor definida no dicionário
-        for token_type, color in self.token_colors.items():
-            # O nome da tag será o tipo do token
-            text_widget.tag_configure(token_type, foreground=color)
+    def set_tokens(self, tokens):
+        self.highlighting_rules.clear()
 
-    def apply_syntax_highlight(self, text_area, tokens):
-        """Aplica o realce de sintaxe com base nos tokens analisados."""
-        
-        # 1. Remover realces existentes para evitar sobreposição
-        for token_type in self.token_colors.keys():
-            text_area.tag_remove(token_type, '1.0', tk.END)
-        
-        # 2. Aplicar o realce token por token
         for token in tokens:
-            # Obtém o tipo de token e a tag de cor correspondente
-            token_type = token.type
-            if token_type in self.token_colors:
-                
-                # O widget Text/ScrolledText usa o formato "linha.coluna" para índices.
-                # A linha começa em 1, mas a coluna começa em 0.
-                
-                # Calcula a posição inicial (start_index) e final (end_index) do lexema
-                # O atributo 'lexpos' do token (gerado pelo PLY) é o índice dentro de todo o código.
-                # Precisamos encontrar a coluna na linha.
-                
-                line_number = token.lineno
-                token_value = token.value
-                
-                # Para evitar problemas com o índice `lexpos` que é global, vamos 
-                # ler a linha e encontrar o valor do token nela (mais robusto).
-                # Se o seu lexer fornece a coluna, o cálculo é mais direto.
-                # Assumindo que você usa o 'lineno' e 'value' do token:
-                
-                line_content = text_area.get(f"{line_number}.0", f"{line_number}.end")
-                
-                try:
-                    # Encontra a coluna inicial do valor do token na linha.
-                    col_start = line_content.index(token_value)
-                except ValueError:
-                    # Se não encontrar (ex: erro na lógica do lexer ou nova linha), 
-                    # simplesmente pula este token.
-                    continue
-                
-                # Índices no formato "linha.coluna"
-                start_index = f"{line_number}.{col_start}"
-                end_index = f"{line_number}.{col_start + len(token_value)}"
-                
-                # 3. Aplicar a tag (cor)
-                text_area.tag_add(token_type, start_index, end_index)
-                
-        # 4. Certificar-se de que o default é aplicado em tudo não realçado (opcional)
-        text_area.tag_add('default', '1.0', tk.END)
+            if token.type in self.token_colors:
+                format = QTextCharFormat()
+                format.setForeground(self.token_colors[token.type])
+                self.highlighting_rules.append((token, format))
 
-    def setup_ui(self):
-        # Configurar grid weights principal
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        
-        # Frame principal com paned window para redimensionamento
-        main_paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
-        main_paned.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Left frame - Código fonte
-        left_frame = ttk.Frame(main_paned)
-        left_frame.columnconfigure(0, weight=1)
-        left_frame.rowconfigure(1, weight=1)
-        
-        # Right frame - Tokens e estatísticas
-        right_frame = ttk.Frame(main_paned)
-        right_frame.columnconfigure(0, weight=1)
-        right_frame.rowconfigure(0, weight=1)
-        right_frame.rowconfigure(1, weight=1)
-        
-        main_paned.add(left_frame, weight=1)
-        main_paned.add(right_frame, weight=1)
-        
-        # ===== LEFT FRAME - CÓDIGO FONTE =====
-        
-        # Frame de controles
-        controls_frame = ttk.LabelFrame(left_frame, text="Controles", padding="10")
-        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        
-        # Botões superiores
-        btn_frame_top = ttk.Frame(controls_frame)
-        btn_frame_top.grid(row=0, column=0, sticky=(tk.W, tk.E))
-        
-        ttk.Button(btn_frame_top, text="Abrir Arquivo", command=self.open_file).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(btn_frame_top, text="Abrir Pasta", command=self.open_folder).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(btn_frame_top, text="Analisar Arquivo Atual", command=self.analyze_current_tab).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(btn_frame_top, text="Analisar Todos", command=self.analyze_all_tabs).pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Botões inferiores
-        btn_frame_bottom = ttk.Frame(controls_frame)
-        btn_frame_bottom.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(5, 0))
-        
-        self.close_tab_btn = ttk.Button(btn_frame_bottom, text="Fechar Aba Atual", command=self.close_current_tab)
-        self.close_tab_btn.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.clear_all_btn = ttk.Button(btn_frame_bottom, text="Limpar Tudo", command=self.clear_all)
-        self.clear_all_btn.pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Label do arquivo atual
-        self.file_label = ttk.Label(btn_frame_bottom, text="Nenhum arquivo selecionado")
-        self.file_label.pack(side=tk.RIGHT)
-        
-        # Frame para código fonte
-        source_frame = ttk.LabelFrame(left_frame, text="Código Fonte", padding="5")
-        source_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        source_frame.columnconfigure(0, weight=1)
-        source_frame.rowconfigure(0, weight=1)
-        
-        # Notebook (abas) para código fonte
-        self.notebook = ttk.Notebook(source_frame)
-        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
-        
-        # ===== RIGHT FRAME - TOKENS E ESTATÍSTICAS =====
-        
-        # Frame dos tokens (parte superior direita)
-        tokens_frame = ttk.LabelFrame(right_frame, text="Tokens Encontrados", padding="5")
-        tokens_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        tokens_frame.columnconfigure(0, weight=1)
-        tokens_frame.rowconfigure(0, weight=1)
-        
-        # Treeview para mostrar tokens
-        columns = ('Line', 'Type', 'Value')
-        self.tokens_tree = ttk.Treeview(tokens_frame, columns=columns, show='headings', height=15)
-        
-        # Definir cabeçalhos
-        self.tokens_tree.heading('Line', text='Linha')
-        self.tokens_tree.heading('Type', text='Tipo')
-        self.tokens_tree.heading('Value', text='Valor')
-        
-        # Configurar colunas
-        self.tokens_tree.column('Line', width=80, anchor=tk.CENTER)
-        self.tokens_tree.column('Type', width=150)
-        self.tokens_tree.column('Value', width=300)
-        
-        # Scrollbar para a treeview
-        tree_scroll = ttk.Scrollbar(tokens_frame, orient=tk.VERTICAL, command=self.tokens_tree.yview)
-        self.tokens_tree.configure(yscrollcommand=tree_scroll.set)
-        
-        self.tokens_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        tree_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        
-        # Frame de estatísticas (parte inferior direita)
-        stats_frame = ttk.LabelFrame(right_frame, text="Estatísticas e Análise", padding="5")
-        stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        stats_frame.columnconfigure(0, weight=1)
-        stats_frame.columnconfigure(1, weight=1)
-        stats_frame.rowconfigure(1, weight=1)
-        
-        # Frame para estatísticas textuais
-        text_stats_frame = ttk.Frame(stats_frame)
-        text_stats_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-        text_stats_frame.columnconfigure(0, weight=1)
-        
-        # Área de texto para estatísticas
-        self.stats_text = scrolledtext.ScrolledText(text_stats_frame, height=6, wrap=tk.WORD, font=("Arial", 9))
-        self.stats_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        self.stats_text.config(state=tk.DISABLED)
-        
-        # Frame para o gráfico
-        chart_frame = ttk.LabelFrame(stats_frame, text="Distribuição de Tokens - Gráfico")
-        chart_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
-        chart_frame.columnconfigure(0, weight=1)
-        chart_frame.rowconfigure(0, weight=1)
-        
-        # Frame para detalhes dos tokens
-        details_frame = ttk.LabelFrame(stats_frame, text="Detalhes por Tipo")
-        details_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
-        details_frame.columnconfigure(0, weight=1)
-        details_frame.rowconfigure(0, weight=1)
-        
-        # Treeview para detalhes dos tokens
-        detail_columns = ('Type', 'Count', 'Percentage')
-        self.detail_tree = ttk.Treeview(details_frame, columns=detail_columns, show='headings', height=10)
-        
-        self.detail_tree.heading('Type', text='Tipo')
-        self.detail_tree.heading('Count', text='Quantidade')
-        self.detail_tree.heading('Percentage', text='Percentual')
-        
-        self.detail_tree.column('Type', width=120)
-        self.detail_tree.column('Count', width=80, anchor=tk.CENTER)
-        self.detail_tree.column('Percentage', width=80, anchor=tk.CENTER)
-        
-        detail_scroll = ttk.Scrollbar(details_frame, orient=tk.VERTICAL, command=self.detail_tree.yview)
-        self.detail_tree.configure(yscrollcommand=detail_scroll.set)
-        
-        self.detail_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        detail_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        
-        # Canvas para o gráfico
-        self.chart_canvas = None
-        self.chart_frame = chart_frame
-        
-        # Bind para duplo clique na treeview
-        self.tokens_tree.bind('<Double-1>', self.on_token_double_click)
-        
-        # Inicializar estado dos botões
-        self.update_buttons_state()
-        
-    def update_buttons_state(self):
-        """Atualiza o estado dos botões baseado no número de abas"""
-        has_tabs = len(self.notebook.tabs()) > 0
-        
-        if has_tabs:
-            self.close_tab_btn.config(state=tk.NORMAL)
-            self.clear_all_btn.config(state=tk.NORMAL)
-        else:
-            self.close_tab_btn.config(state=tk.DISABLED)
-            self.clear_all_btn.config(state=tk.DISABLED)
-    
-    def create_text_tab(self, filename, content):
-        """Cria uma nova aba com área de texto editável"""
-        tab_frame = ttk.Frame(self.notebook)
-        tab_frame.grid_rowconfigure(0, weight=1)
-        tab_frame.grid_columnconfigure(0, weight=1)
-        
-        text_area = scrolledtext.ScrolledText(tab_frame, wrap=tk.WORD, font=("Courier New", 10))
-        text_area.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        self._setup_syntax_tags(text_area) 
-        
-        text_area.insert(1.0, content)
+    def highlightBlock(self, text):
+        for token, format in self.highlighting_rules:
+            if token.lineno == self.currentBlock().blockNumber() + 1:
+                start = text.find(token.value)
+                if start >= 0:
+                    self.setFormat(start, len(token.value), format)
 
-        display_name = os.path.basename(filename)
-        self.notebook.add(tab_frame, text=display_name)
-        
-        self.open_files[filename] = content
-        self.tabs[filename] = {
-            'frame': tab_frame,
-            'text_area': text_area,
-            'display_name': display_name
-        }
-        
-        self.notebook.select(tab_frame)
-        self.update_buttons_state()
-        
-    def analyze_current_tab(self):
-        """Analisa o conteúdo da aba atual"""
-        filename, display_name, text_area = self.get_current_tab_info()
-        
-        if not text_area:
-            return
-        
-        content = text_area.get(1.0, tk.END).strip()
-        if not content:
-            self.clear_analysis()
-            
-            # Limpar o realce se o conteúdo estiver vazio (opcional)
-            for token_type in self.token_colors.keys():
-                text_area.tag_remove(token_type, '1.0', tk.END)
-            text_area.tag_add('default', '1.0', tk.END)
-            
-            return
-        
-        try:
-            tokens = self.parse(content)
-            self.current_tokens = tokens
-            self.display_tokens(tokens)
-            self.update_stats(tokens, display_name)
-            self.update_chart(tokens)
-            self.update_detail_tree(tokens)
-            
-            # >>> NOVO: Aplica o realce de sintaxe
-            self.apply_syntax_highlight(text_area, tokens) 
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro durante análise: {str(e)}")
-    
-    def get_current_tab_info(self):
-        """Retorna informações da aba atual"""
-        current_tab = self.notebook.select()
-        if not current_tab:
-            return None, None, None
-            
-        for filename, tab_info in self.tabs.items():
-            if str(tab_info['frame']) == current_tab:
-                return filename, tab_info['display_name'], tab_info['text_area']
-        
-        return None, None, None
-    
-    def on_tab_changed(self, event):
-        """Callback quando a aba é alterada"""
-        filename, display_name, text_area = self.get_current_tab_info()
-        if filename:
-            self.file_label.config(text=f"Arquivo atual: {display_name}")
-            self.current_file = filename
-            self.analyze_current_tab()
-    
-    def open_file(self):
-        """Abre um arquivo individual"""
-        file_path = filedialog.askopenfilename(
-            title="Selecionar arquivo .tonto",
-            filetypes=[("Tonto files", "*.tonto"), ("All files", "*.*")]
-        )
-        
-        if file_path:
-            self.load_file_into_tab(file_path)
-    
-    def open_folder(self):
-        """Abre todos os arquivos .tonto de uma pasta"""
-        folder_path = filedialog.askdirectory(title="Selecionar pasta com arquivos .tonto")
-        
-        if folder_path:
-            files = []
-            for root, _, filenames in os.walk(folder_path):
-                for filename in filenames:
-                    if filename.endswith('.tonto'):
-                        files.append(os.path.join(root, filename))
-            
-            if not files:
-                messagebox.showinfo("Informação", "Nenhum arquivo .tonto encontrado na pasta selecionada.")
-                return
-            
-            for file_path in files:
-                self.load_file_into_tab(file_path)
-            
-            messagebox.showinfo("Sucesso", f"Carregados {len(files)} arquivos em abas separadas.")
-    
-    def load_file_into_tab(self, file_path):
-        """Carrega um arquivo em uma nova aba"""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            if file_path in self.open_files:
-                for filename, tab_info in self.tabs.items():
-                    if filename == file_path:
-                        self.notebook.select(tab_info['frame'])
-                        break
-            else:
-                self.create_text_tab(file_path, content)
-            
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao ler arquivo {file_path}: {str(e)}")
-    
-    def analyze_all_tabs(self):
-        """Analisa todos os arquivos abertos nas abas"""
-        if not self.open_files:
-            messagebox.showwarning("Aviso", "Não há arquivos abertos para analisar.")
-            return
-        
+
+class CodeEditor(QTextEdit):
+    def __init__(self):
+        super().__init__()
+        self.setFont(QFont("Courier New", 10))
+        self.highlighter = SyntaxHighlighter(self.document())
+
+
+class TokenTable(QTreeWidget):
+    tokenDoubleClicked = pyqtSignal(int, str)
+
+    def __init__(self):
+        super().__init__()
+        self.setColumnCount(3)
+        self.setHeaderLabels(['Linha', 'Tipo', 'Valor'])
+        self.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+    def on_item_double_clicked(self, item, column):
+        line_number = int(item.text(0))
+        token_value = item.text(2)
+        self.tokenDoubleClicked.emit(line_number, token_value)
+
+
+class StatisticsWidget(QTextEdit):
+    def __init__(self):
+        super().__init__()
+        self.setReadOnly(True)
+
+
+class TokenDetailsTable(QTreeWidget):
+    def __init__(self):
+        super().__init__()
+        self.setColumnCount(3)
+        self.setHeaderLabels(['Tipo', 'Quantidade', 'Percentual'])
+
+
+class ChartWidget(FigureCanvas):
+    def __init__(self):
+        self.fig = Figure(figsize=(6, 4), dpi=80)
+        super().__init__(self.fig)
+        self.ax = self.fig.add_subplot(111)
+
+
+class FileTab:
+    def __init__(self, filename, content):
+        self.filename = filename
+        self.display_name = os.path.basename(filename)
+        self.editor = CodeEditor()
+        self.editor.setText(content)
+        self.tokens = []
+
+
+class AnalysisModel:
+    def __init__(self):
+        self.files = {}
+        self.current_tokens = []
+
+    def add_file(self, filename, file_tab):
+        self.files[filename] = file_tab
+
+    def remove_file(self, filename):
+        if filename in self.files:
+            del self.files[filename]
+
+    def clear_files(self):
+        self.files.clear()
+        self.current_tokens.clear()
+
+    def analyze_file(self, filename):
+        if filename in self.files:
+            content = self.files[filename].editor.toPlainText().strip()
+            if content:
+                tokens = self.parse(content)
+                self.files[filename].tokens = tokens
+                return tokens
+        return []
+
+    def analyze_all_files(self):
         all_tokens = []
-        total_tokens = 0
-        
-        for filename, tab_info in self.tabs.items():
-            try:
-                content = tab_info['text_area'].get(1.0, tk.END).strip()
-                if content:
-                    tokens = self.parse(content)
-                    all_tokens.extend(tokens)
-                    total_tokens += len(tokens)
-                    
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro no arquivo {tab_info['display_name']}: {str(e)}")
-        
+        for file_tab in self.files.values():
+            content = file_tab.editor.toPlainText().strip()
+            if content:
+                tokens = self.parse(content)
+                file_tab.tokens = tokens
+                all_tokens.extend(tokens)
         self.current_tokens = all_tokens
-        self.display_tokens(all_tokens)
-        self.update_stats(all_tokens, f"Todos os {len(self.tabs)} arquivos")
-        self.update_chart(all_tokens)
-        self.update_detail_tree(all_tokens)
-        
-        messagebox.showinfo("Análise Concluída", 
-                          f"Processados {len(self.tabs)} arquivos\nTotal de tokens: {total_tokens}")
-    
-    def close_current_tab(self):
-        """Fecha a aba atual"""
-        filename, display_name, text_area = self.get_current_tab_info()
-        
-        if not filename:
-            return
-        
-        current_tab = self.notebook.select()
-        self.notebook.forget(current_tab)
-        
-        if filename in self.open_files:
-            del self.open_files[filename]
-        if filename in self.tabs:
-            del self.tabs[filename]
-        
-        if len(self.notebook.tabs()) == 0:
-            self.file_label.config(text="Nenhum arquivo selecionado")
-            self.clear_analysis()
-        
-        self.update_buttons_state()
-    
+        return all_tokens
+
     def parse(self, data):
         lexer.lineno = 1
         lexer.input(data)
-        tokens = []
-        while True:
-            tok = lexer.token()
-            if not tok:
-                break
-            tokens.append(tok)
-        return tokens
-    
-    def display_tokens(self, tokens):
-        self.clear_tokens()
-        
-        for token in tokens:
-            self.tokens_tree.insert('', tk.END, values=(token.lineno, token.type, token.value))
-    
-    def clear_tokens(self):
-        for item in self.tokens_tree.get_children():
-            self.tokens_tree.delete(item)
-    
-    def clear_detail_tree(self):
-        for item in self.detail_tree.get_children():
-            self.detail_tree.delete(item)
-    
-    def update_stats(self, tokens, filename):
-        """Atualiza as estatísticas textuais"""
-        self.stats_text.config(state=tk.NORMAL)
-        self.stats_text.delete(1.0, tk.END)
-        
-        if not tokens:
-            self.stats_text.insert(1.0, "Nenhum token encontrado.")
+        return list(iter(lexer.token, None))
+
+
+class MainView(QMainWindow):
+    analyzeCurrentRequested = pyqtSignal()
+    analyzeAllRequested = pyqtSignal()
+    fileOpened = pyqtSignal(str)
+    folderOpened = pyqtSignal(str)
+    tabClosed = pyqtSignal(str)
+    allCleared = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Analisador Léxico - Tonto Language")
+        self.setGeometry(100, 100, 1600, 900)
+        self.setup_ui()
+
+    def setup_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        main_layout = QHBoxLayout(central_widget)
+        splitter = QSplitter(Qt.Horizontal)
+
+        left_widget = self.create_left_panel()
+        right_widget = self.create_right_panel()
+
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setSizes([800, 800])
+
+        main_layout.addWidget(splitter)
+
+    def create_left_panel(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        controls_layout = QHBoxLayout()
+        self.open_file_btn = QPushButton("Abrir Arquivo")
+        self.open_folder_btn = QPushButton("Abrir Pasta")
+        self.analyze_current_btn = QPushButton("Analisar Arquivo Atual")
+        self.analyze_all_btn = QPushButton("Analisar Todos")
+        self.close_tab_btn = QPushButton("Fechar Aba Atual")
+        self.clear_all_btn = QPushButton("Limpar Tudo")
+        self.file_label = QLabel("Nenhum arquivo selecionado")
+
+        controls_layout.addWidget(self.open_file_btn)
+        controls_layout.addWidget(self.open_folder_btn)
+        controls_layout.addWidget(self.analyze_current_btn)
+        controls_layout.addWidget(self.analyze_all_btn)
+        controls_layout.addWidget(self.close_tab_btn)
+        controls_layout.addWidget(self.clear_all_btn)
+        controls_layout.addStretch()
+        controls_layout.addWidget(self.file_label)
+
+        self.tab_widget = QTabWidget()
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
+
+        layout.addLayout(controls_layout)
+        layout.addWidget(self.tab_widget)
+
+        self.open_file_btn.clicked.connect(self.open_file_dialog)
+        self.open_folder_btn.clicked.connect(self.open_folder_dialog)
+        self.analyze_current_btn.clicked.connect(
+            self.analyzeCurrentRequested.emit)
+        self.analyze_all_btn.clicked.connect(self.analyzeAllRequested.emit)
+        self.close_tab_btn.clicked.connect(self.close_current_tab)
+        self.clear_all_btn.clicked.connect(self.allCleared.emit)
+
+        return widget
+
+    def create_right_panel(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        self.token_table = TokenTable()
+        layout.addWidget(QLabel("Tokens Encontrados"))
+        layout.addWidget(self.token_table)
+
+        self.stats_widget = StatisticsWidget()
+        layout.addWidget(QLabel("Estatísticas"))
+        layout.addWidget(self.stats_widget)
+
+        charts_layout = QHBoxLayout()
+        self.chart_widget = ChartWidget()
+        self.details_table = TokenDetailsTable()
+
+        charts_layout.addWidget(self.chart_widget)
+        charts_layout.addWidget(self.details_table)
+        layout.addLayout(charts_layout)
+
+        return widget
+
+    def open_file_dialog(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Selecionar arquivo .tonto", "", "Tonto files (*.tonto);;All files (*.*)"
+        )
+        if filename:
+            self.fileOpened.emit(filename)
+
+    def open_folder_dialog(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, "Selecionar pasta com arquivos .tonto")
+        if folder:
+            self.folderOpened.emit(folder)
+
+    def add_file_tab(self, file_tab):
+        self.tab_widget.addTab(file_tab.editor, file_tab.display_name)
+        self.update_buttons_state()
+
+    def close_current_tab(self):
+        current_index = self.tab_widget.currentIndex()
+        if current_index >= 0:
+            filename = self.get_current_filename()
+            self.tab_widget.removeTab(current_index)
+            if filename:
+                self.tabClosed.emit(filename)
+            self.update_buttons_state()
+
+    def get_current_filename(self):
+        current_index = self.tab_widget.currentIndex()
+        if current_index >= 0:
+            return self.tab_widget.tabText(current_index)
+        return None
+
+    def on_tab_changed(self, index):
+        if index >= 0:
+            display_name = self.tab_widget.tabText(index)
+            self.file_label.setText(f"Arquivo atual: {display_name}")
+            self.analyzeCurrentRequested.emit()
         else:
-            stats_text = f"📊 ANÁLISE LÉXICA - {filename.upper()}\n"
-            stats_text += "=" * 50 + "\n"
+            self.file_label.setText("Nenhum arquivo selecionado")
+
+    def update_buttons_state(self):
+        has_tabs = self.tab_widget.count() > 0
+        self.close_tab_btn.setEnabled(has_tabs)
+        self.clear_all_btn.setEnabled(has_tabs)
+
+    def clear_all_tabs(self):
+        self.tab_widget.clear()
+        self.update_buttons_state()
+
+
+class MainController:
+    def __init__(self):
+        self.app = QApplication([])
+        self.model = AnalysisModel()
+        self.view = MainView()
+
+        self.setup_connections()
+        self.view.show()
+
+    def setup_connections(self):
+        self.view.analyzeCurrentRequested.connect(self.analyze_current_file)
+        self.view.analyzeAllRequested.connect(self.analyze_all_files)
+        self.view.fileOpened.connect(self.open_file)
+        self.view.folderOpened.connect(self.open_folder)
+        self.view.tabClosed.connect(self.close_file)
+        self.view.allCleared.connect(self.clear_all)
+        self.view.token_table.tokenDoubleClicked.connect(self.navigate_to_token)
+
+    def open_file(self, filename):
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            if filename not in self.model.files:
+                file_tab = FileTab(filename, content)
+                self.model.add_file(filename, file_tab)
+                self.view.add_file_tab(file_tab)
+            else:
+                self.select_existing_tab(filename)
+
+        except Exception as e:
+            QMessageBox.critical(
+                self.view, "Erro", f"Erro ao ler arquivo: {str(e)}")
+
+    def open_folder(self, folder_path):
+        tonto_files = []
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.endswith('.tonto'):
+                    tonto_files.append(os.path.join(root, file))
+
+        if not tonto_files:
+            QMessageBox.information(
+                self.view, "Informação", "Nenhum arquivo .tonto encontrado.")
+            return
+
+        for file_path in tonto_files:
+            self.open_file(file_path)
+
+        QMessageBox.information(self.view, "Sucesso",
+                                f"Carregados {len(tonto_files)} arquivos.")
+
+    def select_existing_tab(self, filename):
+        display_name = os.path.basename(filename)
+        for i in range(self.view.tab_widget.count()):
+            if self.view.tab_widget.tabText(i) == display_name:
+                self.view.tab_widget.setCurrentIndex(i)
+                break
+
+    def close_file(self, filename):
+        # Corrigido: agora recebe o display_name, precisamos encontrar o filename real
+        display_name = filename
+        for filepath, file_tab in self.model.files.items():
+            if file_tab.display_name == display_name:
+                self.model.remove_file(filepath)
+                break
+
+    def analyze_current_file(self):
+        current_index = self.view.tab_widget.currentIndex()
+        if current_index >= 0:
+            display_name = self.view.tab_widget.tabText(current_index)
+            # Encontrar o filename real baseado no display_name
+            filename = None
+            for filepath, file_tab in self.model.files.items():
+                if file_tab.display_name == display_name:
+                    filename = filepath
+                    break
+
+            if filename:
+                tokens = self.model.analyze_file(filename)
+                self.update_display(tokens, display_name)
+
+                file_tab = self.model.files[filename]
+                file_tab.editor.highlighter.set_tokens(tokens)
+                file_tab.editor.highlighter.rehighlight()
+
+    def analyze_all_files(self):
+        tokens = self.model.analyze_all_files()
+        self.update_display(
+            tokens, f"Todos os {len(self.model.files)} arquivos")
+
+        for file_tab in self.model.files.values():
+            file_tab.editor.highlighter.set_tokens(file_tab.tokens)
+            file_tab.editor.highlighter.rehighlight()
+
+    def update_display(self, tokens, source_name):
+        self.update_token_table(tokens)
+        self.update_statistics(tokens, source_name)
+        self.update_chart(tokens)
+        self.update_details_table(tokens)
+
+    def update_token_table(self, tokens):
+        self.view.token_table.clear()
+        for token in tokens:
+            item = QTreeWidgetItem(
+                [str(token.lineno), token.type, token.value])
+            self.view.token_table.addTopLevelItem(item)
+
+    def update_statistics(self, tokens, source_name):
+        stats_text = f"📊 ANÁLISE LÉXICA - {source_name.upper()}\n"
+        stats_text += "=" * 50 + "\n"
+
+        if tokens:
             stats_text += f"• Total de tokens: {len(tokens)}\n"
             stats_text += f"• Linhas processadas: {tokens[-1].lineno if tokens else 0}\n"
             stats_text += f"• Tipos únicos de tokens: {len(set(token.type for token in tokens))}\n"
-            
-            # Encontrar token mais frequente
-            if tokens:
-                token_counts = collections.Counter(token.type for token in tokens)
-                most_common = token_counts.most_common(1)[0]
-                stats_text += f"• Token mais frequente: {most_common[0]} ({most_common[1]} ocorrências)\n"
-            
-            self.stats_text.insert(1.0, stats_text)
-        
-        self.stats_text.config(state=tk.DISABLED)
-    
-    def update_detail_tree(self, tokens):
-        """Atualiza a treeview de detalhes"""
-        self.clear_detail_tree()
-        
-        if not tokens:
-            return
-        
-        token_counts = collections.Counter(token.type for token in tokens)
-        total_tokens = len(tokens)
-        
-        for token_type, count in sorted(token_counts.items(), key=lambda x: x[1], reverse=True):
-            percentage = (count / total_tokens) * 100
-            self.detail_tree.insert('', tk.END, values=(
-                token_type, 
-                count, 
-                f"{percentage:.1f}%"
-            ))
-    
-    def update_chart(self, tokens):
-        """Atualiza o gráfico de pizza com a distribuição dos tokens"""
-        self.clear_chart()
-        
-        if not tokens:
-            # Mostrar gráfico vazio
-            fig = Figure(figsize=(6, 4), dpi=80)
-            ax = fig.add_subplot(111)
-            ax.text(0.5, 0.5, 'Nenhum dado\npara exibir', 
-                   horizontalalignment='center', verticalalignment='center',
-                   transform=ax.transAxes, fontsize=12, color='gray')
-            ax.set_facecolor('#f0f0f0')
-            ax.set_title('Distribuição de Tokens', pad=20, fontweight='bold')
-        else:
-            # Contar tokens por tipo
+
             token_counts = collections.Counter(token.type for token in tokens)
-            
-            # Preparar dados para o gráfico
-            labels = []
-            sizes = []
-            
-            for token_type, count in token_counts.most_common():
-                labels.append(f"{token_type}\n({count})")
-                sizes.append(count)
-            
-            # Criar figura do matplotlib
-            fig = Figure(figsize=(6, 4), dpi=80)
-            ax = fig.add_subplot(111)
-            
-            # Criar gráfico de pizza
-            colors = plt.cm.Pastel1(range(len(labels)))
-            wedges, texts, autotexts = ax.pie(sizes, labels=labels, autopct='%1.1f%%', 
-                                             startangle=90, colors=colors, 
-                                             textprops={'fontsize': 8})
-            
-            # Melhorar a aparência
-            ax.set_title('Distribuição de Tokens', pad=20, fontweight='bold')
-            
-            # Ajustar layout
-            fig.tight_layout()
-        
-        # Embeddar no tkinter
-        self.chart_canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
-        self.chart_canvas.draw()
-        self.chart_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-    
-    def clear_chart(self):
-        """Limpa o gráfico atual"""
-        if self.chart_canvas:
-            self.chart_canvas.get_tk_widget().destroy()
-            self.chart_canvas = None
-    
-    def clear_analysis(self):
-        """Limpa toda a análise"""
-        self.clear_tokens()
-        self.clear_detail_tree()
-        self.update_stats([], "")
-        self.clear_chart()
-    
-    def on_token_double_click(self, event):
-        """Quando um token é clicado duas vezes, navega para o lexema no editor atual"""
-        filename, display_name, text_area = self.get_current_tab_info()
-        if not text_area:
-            return
-            
-        selection = self.tokens_tree.selection()
-        if not selection:
-            return
-            
-        item = selection[0]
-        line_number = int(self.tokens_tree.item(item, 'values')[0])
-        token_value = self.tokens_tree.item(item, 'values')[2]
-        
-        line_start = f"{line_number}.0"
-        line_end = f"{line_number}.end"
-        line_content = text_area.get(line_start, line_end)
-        
-        start_pos = line_content.find(token_value)
-        
-        if start_pos != -1:
-            lexema_start = f"{line_number}.{start_pos}"
-            lexema_end = f"{line_number}.{start_pos + len(token_value)}"
-            
-            text_area.focus_set()
-            text_area.tag_remove("sel", "1.0", tk.END)
-            text_area.tag_add("sel", lexema_start, lexema_end)
-            text_area.see(lexema_start)
-            text_area.focus_force()
+            most_common = token_counts.most_common(1)[0]
+            stats_text += f"• Token mais frequente: {most_common[0]} ({most_common[1]} ocorrências)\n"
         else:
-            text_area.focus_set()
-            text_area.tag_remove("sel", "1.0", tk.END)
-            text_area.tag_add("sel", line_start, line_end)
-            text_area.see(line_start)
-    
+            stats_text += "Nenhum token encontrado."
+
+        self.view.stats_widget.setText(stats_text)
+
+    def update_chart(self, tokens):
+        self.view.chart_widget.ax.clear()
+
+        if not tokens:
+            self.view.chart_widget.ax.text(0.5, 0.5, 'Nenhum dado\npara exibir',
+                                           horizontalalignment='center', verticalalignment='center',
+                                           transform=self.view.chart_widget.ax.transAxes,
+                                           fontsize=12, color='gray')
+            self.view.chart_widget.ax.set_facecolor('#f0f0f0')
+        else:
+            token_counts = collections.Counter(token.type for token in tokens)
+            labels = [
+                f"{token_type}\n({count})" for token_type, count in token_counts.most_common()]
+            sizes = list(token_counts.values())
+
+            colors = plt.cm.Pastel1(range(len(labels)))
+            self.view.chart_widget.ax.pie(sizes, labels=labels, autopct='%1.1f%%',
+                                          startangle=90, colors=colors, textprops={'fontsize': 8})
+
+        self.view.chart_widget.ax.set_title(
+            'Distribuição de Tokens', pad=20, fontweight='bold')
+        self.view.chart_widget.draw()
+
+    def update_details_table(self, tokens):
+        self.view.details_table.clear()
+
+        if tokens:
+            token_counts = collections.Counter(token.type for token in tokens)
+            total_tokens = len(tokens)
+
+            for token_type, count in sorted(token_counts.items(), key=lambda x: x[1], reverse=True):
+                percentage = (count / total_tokens) * 100
+                item = QTreeWidgetItem(
+                    [token_type, str(count), f"{percentage:.1f}%"])
+                self.view.details_table.addTopLevelItem(item)
+
+    def navigate_to_token(self, line_number, token_value):
+        current_editor = self.view.tab_widget.currentWidget()
+        if not current_editor:
+            return
+
+        cursor = current_editor.textCursor()
+        cursor.movePosition(cursor.Start)
+
+        for _ in range(line_number - 1):
+            cursor.movePosition(cursor.Down)
+
+        line_text = cursor.block().text()
+        start_pos = line_text.find(token_value)
+
+        if start_pos != -1:
+            cursor.setPosition(cursor.block().position() + start_pos)
+            cursor.setPosition(cursor.block().position() +
+                               start_pos + len(token_value), cursor.KeepAnchor)
+            current_editor.setTextCursor(cursor)
+            current_editor.setFocus()
+
     def clear_all(self):
-        """Fecha todas as abas e limpa a interface"""
-        while self.notebook.tabs():
-            self.notebook.forget(0)
-        
-        self.open_files.clear()
-        self.tabs.clear()
-        self.clear_analysis()
-        self.file_label.config(text="Nenhum arquivo selecionado")
-        self.current_file = None
-        self.update_buttons_state()
+        self.model.clear_files()
+        self.view.clear_all_tabs()
+        self.update_display([], "")
+
+    def run(self):
+        return self.app.exec_()
+
 
 def main():
-    root = tk.Tk()
-    app = LexicalAnalyzerGUI(root)
-    root.mainloop()
+    controller = MainController()
+    controller.run()
+
 
 if __name__ == '__main__':
     main()
