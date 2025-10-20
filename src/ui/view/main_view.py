@@ -1,9 +1,8 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QSplitter, QPushButton, QLabel, QFileDialog, 
-                             QMenuBar, QMenu, QAction)
+                             QSplitter, QLabel, QFileDialog, QAction)
 
-from ui.widgets import TokenTable, StatisticsWidget, ChartWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget
+from ui.widgets import TokenTable, StatisticsWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget
 
 class MainView(QMainWindow):
     analyzeCurrentRequested = pyqtSignal()
@@ -19,81 +18,10 @@ class MainView(QMainWindow):
         self.setGeometry(100, 100, 1600, 900)
         self.setup_ui()
 
-        # Definir tema escuro
-        self.setStyleSheet("""
-            QFileDialog {
-                background-color: #2b2b2b;
-                color: #ffffff;
-            }
-            QFileDialog QLabel {
-                color: #ffffff;
-            }
-            QFileDialog QPushButton {
-                background-color: #3c3f41;
-                color: #ffffff;
-            }
-            QMainWindow {
-                background-color: #2b2b2b;
-                /* color: #ffffff;*/
-            }
-            QLabel, QTreeWidget, QMenuBar, QMenu, QAction, QPushButton {
-                color: #ffffff;
-            }
-            QTreeWidget {
-                background-color: #3c3f41;
-            }
-            QHeaderView::section {
-                background-color: #4b4b4b;
-                color: #ffffff;
-            }
-            QTabBar::tab {
-                background: #3c3f41;
-                color: #ffffff;
-                padding: 5px;
-            }
-            QTabBar::tab:selected {
-                background: #505357;
-            }
-            QSplitter::handle {
-                background-color: rgba(0, 0, 0, 20%);
-            }
-            QSplitter::handle:hover {
-                background-color: #4020FF;
-            }
-            QTextEdit {
-                background-color: #3c3f41;
-                color: #ffffff;
-            }
-            QScrollBar {
-                background-color: #2b2b2b;
-            }
-            QScrollBar::handle {
-                background-color: #505357;
-            }
-            QScrollBar::handle:hover {
-                background-color: #4020FF;
-            }
-            QMenuBar {
-                background-color: #2b2b2b;
-            }
-            QMenu {
-                background-color: #3c3f41;
-            }
-            QMenu::item:selected {
-                background-color: #4020FF;
-            }
-            QTabWidget::pane {
-                border-top: 2px solid #4020FF;
-            }
-            QFileSystemModel {
-                background-color: #3c3f41;
-                color: #ffffff;
-            }
-            QTreeView {
-                background-color: #3c3f41;
-                color: #ffffff;
-            }
-        """)
+        # Estilizar a aplicação
+        with open("src/ui/view/style.css", "r") as f:
+            style_sheet = f.read()
+            self.setStyleSheet(style_sheet)
 
     def setup_ui(self):
         central_widget = QWidget()
@@ -104,17 +32,6 @@ class MainView(QMainWindow):
 
         self.main_splitter = QSplitter(Qt.Horizontal)
         self.main_splitter.setHandleWidth(8)
-        
-        # Alterar cursor do mouse quando sobre o splitter
-        self.main_splitter.setStyleSheet("""
-            QSplitter::handle {
-                background-color: rgba(0, 0, 0, 20%);
-            }
-            QSplitter::handle:hover {
-                width: 8px;
-                background-color: #4020FF;
-            }
-        """)
 
         left_widget = self.create_left_panel()
         middle_widget = self.create_middle_panel()
