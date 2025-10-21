@@ -67,9 +67,6 @@ USO:
         print(f"{'Erros Lexicos:':<20} {len(lexical_errors)}")
         print(f"{'Total de Tokens:':<20} {len(all_tokens)}")
         
-        if char_count > 0:
-            print(f"{'Tokens por caractere:':<20} {len(all_tokens)/char_count:.2f}")
-        
         print("="*70)
         
         if lexical_errors:

@@ -167,6 +167,12 @@ class Token:
         self.lineno = lineno
         self.lexpos = lexpos
         self.token_pos = token_pos
+    
+    def __str__(self):
+        return f"Token(type={self.type}, value={self.value}, line={self.lineno}, pos={self.token_pos})"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class TontoLexer:
