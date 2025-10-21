@@ -118,7 +118,7 @@ Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/e
 
 Para analisar um arquivo `.tonto` via terminal:
 ```bash
-python src/cli.py
+python src/cli_app.py
 ```
 
 ---
