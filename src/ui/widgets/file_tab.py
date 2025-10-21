@@ -9,3 +9,4 @@ class FileTab:
         self.editor = CodeEditor()
         self.editor.setText(content)
         self.tokens = []
+        self.errors = []

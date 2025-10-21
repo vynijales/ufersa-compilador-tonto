@@ -2,8 +2,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QSplitter, QLabel, QFileDialog, QAction)
 
-from ui.widgets import TokenTable, StatisticsWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget
-
+from ui.widgets import TokenTable, StatisticsWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget, ErrorTable
 class MainView(QMainWindow):
     analyzeCurrentRequested = pyqtSignal()
     analyzeAllRequested = pyqtSignal()
@@ -123,14 +122,22 @@ class MainView(QMainWindow):
         widget.setMaximumWidth(500)
         widget.setMinimumWidth(300)
 
+        # Tabela de tokens
         self.token_table = TokenTable()
         layout.addWidget(QLabel("Tokens Encontrados"))
         layout.addWidget(self.token_table)
 
+        # Tabela de erros
+        self.error_table = ErrorTable()
+        layout.addWidget(QLabel("Erros Léxicos"))
+        layout.addWidget(self.error_table)
+
+        # Estatísticas
         self.stats_widget = StatisticsWidget()
         layout.addWidget(QLabel("Estatísticas"))
         layout.addWidget(self.stats_widget)
 
+        # Detalhes do token
         self.details_table = TokenDetailsTable()
         layout.addWidget(self.details_table)
 
