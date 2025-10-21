@@ -46,11 +46,18 @@ sudo dnf install python3-pip
 ```bash
 sudo pacman -S python-pip
 ```
+
+**Windows:**
+1. Baixe o instalador do Python em [python.org](https://www.python.org/downloads/).
+2. Durante a instalação, marque a opção "Add Python to PATH".
+
 Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/en/stable/installation/).
 
 ---
 
 ## Configuração do Projeto (Python)
+
+Estando na raiz do projeto, siga os passos abaixo para configurar o ambiente Python:
 
 1. **Crie um ambiente virtual:**
    ```bash
@@ -71,6 +78,8 @@ Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/e
    ```bash
    pip install -r requirements.txt
    ```
+
+> Caso não funcione, é necessário instalar o pacote python-venv via gerenciador de pacotes do seu sistema operacional.
 
 ---
 
@@ -93,11 +102,14 @@ Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/e
 └── ...
 ```
 
-- **lexer/**: Implementação do analisador léxico usando [PLY](https://www.dabeaz.com/ply/).
-- **cli/**: Módulos auxiliares para a interface de linha de comando.
-- **ui/controller/**: Controladores da interface gráfica (PyQt5).
-- **ui/view/**: Layouts e janelas principais.
-- **ui/widgets/**: Componentes reutilizáveis (editor de código, árvore de arquivos, tabelas de tokens, etc).
+- **src/lexer/**: Implementação do analisador léxico usando [PLY](https://www.dabeaz.com/ply/).
+- **src/cli/**: Módulos para a aplicação de linha de comando.
+  - **src/cli/controller/**: Controladores da CLI.
+  - **src/cli/view/**: Componentes de visualização da CLI.
+- **src/ui/**: Módulos para a interface gráfica (GUI) usando PyQt5.
+  - **src/ui/controller/**: Controladores da interface gráfica (PyQt5).
+  - **src/ui/view/**: Layouts e janelas principais.
+  - **src/ui/widgets/**: Componentes reutilizáveis (editor de código, árvore de arquivos, tabelas de tokens, etc).
 - **exemplos/**: Projetos e arquivos de exemplo para testes e aprendizado.
 
 ---
@@ -120,6 +132,8 @@ Para analisar um arquivo `.tonto` via terminal:
 ```bash
 python src/cli_app.py
 ```
+
+> Forneça o caminho do arquivo a ser analisado.
 
 ---
 
