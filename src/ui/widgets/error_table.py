@@ -17,7 +17,6 @@ class ErrorTable(QTreeWidget):
 
     def update_errors(self, errors):
         """Atualiza a tabela com a lista de erros"""
-        print('ERROROROROROR:', errors)
         self.clear()
         
         for error in errors:
