@@ -1,5 +1,5 @@
 
-from lexer.lexer import tokenize
+from lexer.lexer import TontoLexer
 
 class FilesHandler:
     def __init__(self):
@@ -37,5 +37,7 @@ class FilesHandler:
         self.current_tokens = all_tokens
         return all_tokens
 
-    def parse(self, data):
-        return list(tokenize(data))
+    def tokenize(self, data):
+        lexer = TontoLexer()
+        tokens = list(lexer.tokenize(data))
+        return tokens
