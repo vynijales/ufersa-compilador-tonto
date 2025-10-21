@@ -1,0 +1,11 @@
+{
+    "files.exclude": {
+        "**/examplos/**/*.tonto": true
+    },
+    "search.exclude": {
+        "**/examplos/**/*.tonto": true
+    },
+    "files.watcherExclude": {
+        "**/examplos/**/*.tonto": true
+    }
+}
