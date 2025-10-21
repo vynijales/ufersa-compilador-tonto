@@ -50,7 +50,7 @@ class TontoCLI:
     def clear_screen(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    def print_tokens(self, tokens, source_name="Código digitado"):
+    def print_tokens(self, tokens, source_name="Código digitado", char_count=0):
         print(f'\n🎯 Processando: {source_name}')
         print('─' * 50)
         
@@ -62,13 +62,56 @@ class TontoCLI:
             print("❌ Nenhum token encontrado.")
             return
             
-        token_count = 0
-        for i, token in enumerate(tokens, 1):
-            print(f"{i:3d}. {token}")
-            token_count += 1
+        # Contar tokens válidos e erros
+        valid_tokens = []
+        lexical_errors = []
         
-        print(f'\n✅ Total de tokens encontrados: {token_count}')
-        print('─' * 50)
+        for token in tokens:
+            if hasattr(token, 'type'):
+                token_type = getattr(token, 'type', 'UNKNOWN')
+                if 'ERROR' in str(token_type).upper():
+                    lexical_errors.append(token)
+                else:
+                    valid_tokens.append(token)
+            else:
+                # Se for uma string, verificar se contém "ERROR"
+                token_str = str(token)
+                if 'ERROR' in token_str.upper():
+                    lexical_errors.append(token)
+                else:
+                    valid_tokens.append(token)
+        
+        # Exibir tokens detalhados
+        print("\n📋 TOKENS ENCONTRADOS:")
+        print("-" * 60)
+        
+        all_tokens = valid_tokens + lexical_errors
+        for i, token in enumerate(all_tokens, 1):
+            print(f"{i:3d}. {token}")
+        
+        # Exibir tabela de resultados
+        print("\n" + "="*70)
+        print("📊 RESUMO DA ANÁLISE LÉXICA")
+        print("="*70)
+        
+        # Formatar a tabela
+        print(f"{'Arquivo/Fonte:':<20} {source_name}")
+        print(f"{'Caracteres:':<20} {char_count}")
+        print(f"{'Tokens Válidos:':<20} {len(valid_tokens)}")
+        print(f"{'Erros Léxicos:':<20} {len(lexical_errors)}")
+        print(f"{'Total de Tokens:':<20} {len(all_tokens)}")
+        
+        # Estatísticas adicionais
+        if char_count > 0:
+            print(f"{'Tokens por caractere:':<20} {len(all_tokens)/char_count:.2f}")
+        
+        print("="*70)
+        
+        # Mostrar detalhes dos erros se houver
+        if lexical_errors:
+            print("\n❌ ERROS LÉXICOS ENCONTRADOS:")
+            for error in lexical_errors:
+                print(f"   - {error}")
 
     def tokenize_file(self, file_path=None):
         if not file_path:
@@ -97,9 +140,11 @@ class TontoCLI:
             with open(path, 'r', encoding='utf-8') as file:
                 content = file.read()
 
+            char_count = len(content)
+            
             # Tokenize e converte para lista se for generator
             tokens = tokenize(content)
-            self.print_tokens(tokens, f"Arquivo: {path.name}")
+            self.print_tokens(tokens, f"Arquivo: {path.name}", char_count)
 
         except UnicodeDecodeError:
             print("❌ Erro de codificação: não foi possível ler o arquivo como UTF-8")
@@ -130,10 +175,11 @@ class TontoCLI:
             return
 
         code = '\n'.join(lines)
+        char_count = len(code)
         
         # Tokenize e converte para lista se for generator
         tokens = tokenize(code)
-        self.print_tokens(tokens)
+        self.print_tokens(tokens, "Entrada do Terminal", char_count)
 
     def get_token_count(self, tokens):
         """Conta tokens de forma segura, lidando com generators"""
