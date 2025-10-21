@@ -183,11 +183,11 @@ class TontoLexer:
     def _build_lexer(self):
         """Constrói o lexer PLY"""
         # Regras de tokens
-        self.t_PACKAGE_IDENTIFIER = r"(\".+\")|((?:[a-zA-Z][a-zA-Z_]*\.)*[a-zA-Z][a-zA-Z_]*Package)"
-        self.t_CLASS_IDENTIFIER = r'[A-Z][_A-Za-z]*'
-        self.t_RELATION_IDENTIFIER = r'[a-z]+[_a-zA-Z]*'
-        self.t_INSTANCE_IDENTIFIER = r'[a-zA-Z][a-zA-Z_]*\d+'
-        self.t_USER_TYPE = r'[A-Za-z]+DataType'
+        self.t_PACKAGE_IDENTIFIER = r"(\".+\")|(\b(?:[a-zA-Z][a-zA-Z_]*\.)*[a-zA-Z][a-zA-Z_]*Package\b)"
+        self.t_CLASS_IDENTIFIER = r'\b[A-Z][_A-Za-z]*\b'
+        self.t_RELATION_IDENTIFIER = r'\b[a-z]+[_a-zA-Z]*\b'
+        self.t_INSTANCE_IDENTIFIER = r'\b[a-zA-Z][a-zA-Z_]*\d+\b'
+        self.t_USER_TYPE = r'\b[A-Za-z]+DataType\b'
 
         self.t_KEYWORD = r'\b({})\b'.format('|'.join(KEYWORDS))
         self.t_CLASS_STEREOTYPE = r'\b({})\b'.format('|'.join(CLASS_STEREOTYPES))
@@ -195,7 +195,7 @@ class TontoLexer:
         self.t_META_ATTRIBUTES = r'\b({})\b'.format('|'.join(META_ATTRIBUTES))
         self.t_NATIVE_TYPE = r'\b({})\b'.format('|'.join(NATIVE_TYPES))
 
-        self.t_NUMBER = r'\d+'
+        self.t_NUMBER = r'\b\d+\b'
 
         # Símbolos (ordem importa para evitar conflitos)
         self.t_AGGREGATION = r'<>--'
@@ -231,16 +231,33 @@ class TontoLexer:
         """Trata erros léxicos e os adiciona à lista de erros"""
         line = t.lexer.lineno
         column = self._get_column_position(t.lexpos)
-        char = t.value[0]
-        message = f"Illegal character"
-
-        error = LexerError(line, column, char, message)
+        
+        # Captura o token completo até encontrar um delimitador
+        error_token = ""
+        pos = 0
+        
+        # Define delimitadores que separam tokens
+        delimiters = {' ', '\t', '\n', '\r'}
+        
+        # Consome caracteres até encontrar um delimitador ou fim da string
+        while pos < len(t.value) and t.value[pos] not in delimiters:
+            error_token += t.value[pos]
+            pos += 1
+        
+        # Se não encontrou nenhum caractere válido, pega pelo menos um
+        if not error_token:
+            error_token = t.value[0]
+            pos = 1
+        
+        message = f"Illegal token"
+        
+        error = LexerError(line, column, error_token, message)
         self.errors.append(error)
-
-        # Cria token de erro
+        
+        # Cria token de erro com o token completo
         t.type = 'ERROR'
-        t.value = char
-        t.lexer.skip(1)
+        t.value = error_token
+        t.lexer.skip(pos)  # Pula todos os caracteres do token inválido
         return t
 
     def _get_column_position(self, lexpos: int) -> int:
