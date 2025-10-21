@@ -1,9 +1,8 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QSplitter, QPushButton, QLabel, QFileDialog, 
-                             QMenuBar, QMenu, QAction)
+                             QSplitter, QLabel, QFileDialog, QAction)
 
-from ui.widgets import TokenTable, StatisticsWidget, ChartWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget
+from ui.widgets import TokenTable, StatisticsWidget, CloseableTabWidget, TokenDetailsTable, FileTreeWidget
 
 class MainView(QMainWindow):
     analyzeCurrentRequested = pyqtSignal()
@@ -19,12 +18,20 @@ class MainView(QMainWindow):
         self.setGeometry(100, 100, 1600, 900)
         self.setup_ui()
 
+        # Estilizar a aplicação
+        with open("src/ui/view/style.css", "r") as f:
+            style_sheet = f.read()
+            self.setStyleSheet(style_sheet)
+
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
         self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter.setHandleWidth(8)
 
         left_widget = self.create_left_panel()
         middle_widget = self.create_middle_panel()
@@ -88,6 +95,7 @@ class MainView(QMainWindow):
         widget = QWidget()
         self.left_layout = QVBoxLayout(widget)
         self.left_layout.addWidget(QLabel("Árvore de Arquivos"))
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
         widget.setMaximumWidth(300)
 
         # Área do file tree
@@ -98,6 +106,7 @@ class MainView(QMainWindow):
     def create_middle_panel(self):
         widget = QWidget()
         self.middle_layout = QVBoxLayout(widget)
+        self.middle_layout.setContentsMargins(0, 0, 0, 0)
 
         # Área de abas
         self.tab_widget = CloseableTabWidget(close_callback=self.on_tab_closed)
@@ -109,6 +118,8 @@ class MainView(QMainWindow):
     def create_right_panel(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         widget.setMaximumWidth(500)
         widget.setMinimumWidth(300)
 
