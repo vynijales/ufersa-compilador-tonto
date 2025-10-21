@@ -80,6 +80,9 @@ Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/e
 .
 ├── src/
 │   ├── lexer/           # Analisador léxico da linguagem Tonto
+│   ├── cli/             # Aplicação de linha de comando
+│   │   ├── controller/    # Controladores da CLI
+│   │   ├── view/          # Componentes de visualização da CLI
 │   └── ui/
 │       ├── controller/  # Lógica de controle da interface gráfica
 │       ├── view/        # Componentes visuais (layouts, janelas)
@@ -91,6 +94,7 @@ Se necessário, consulte a [documentação oficial do pip](https://pip.pypa.io/e
 ```
 
 - **lexer/**: Implementação do analisador léxico usando [PLY](https://www.dabeaz.com/ply/).
+- **cli/**: Módulos auxiliares para a interface de linha de comando.
 - **ui/controller/**: Controladores da interface gráfica (PyQt5).
 - **ui/view/**: Layouts e janelas principais.
 - **ui/widgets/**: Componentes reutilizáveis (editor de código, árvore de arquivos, tabelas de tokens, etc).
@@ -116,7 +120,8 @@ Para analisar um arquivo `.tonto` via terminal:
 ```bash
 python src/cli.py
 ```
-Siga as instruções interativas para informar o caminho do arquivo.
+
+---
 
 ## Exemplos
 
@@ -133,6 +138,6 @@ Veja a pasta [exemplos/](exemplos/) para exemplos práticos de projetos Tonto, i
 
 ## Licença
 
-Este projeto é distribuído sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+Este projeto é distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
