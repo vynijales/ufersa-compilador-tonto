@@ -6,3 +6,5 @@ from .file_tree import FileTreeWidget
 from .statistics_widget import StatisticsWidget
 from .token_details_table import TokenDetailsTable
 from .token_table import TokenTable
+from .error_table import ErrorTable
+from .syntax_highlighter import SyntaxHighlighter

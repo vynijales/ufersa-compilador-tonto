@@ -26,6 +26,7 @@ class MainController:
         self.view.tabClosed.connect(self.close_file)
         self.view.allCleared.connect(self.clear_all)
         self.view.token_table.tokenDoubleClicked.connect(self.navigate_to_token)
+        self.view.error_table.errorDoubleClicked.connect(self.navigate_to_error)  # Adicionar conexão para erros
 
     def setup_file_tree(self):
         """Configura o file tree widget na interface"""
@@ -36,14 +37,12 @@ class MainController:
         # Inserir o file tree no layout do painel esquerdo
         self.view.left_layout.insertWidget(0, self.view.file_tree)
 
-
     def on_folder_double_clicked(self, folder_path):
         """Manipula duplo clique em pastas - expande/contrai na árvore"""
         # A expansão/contração já é tratada no próprio FileTreeWidget
         pass
 
     def open_file(self, filename):
-
         filename = os.path.normpath(filename) # Padronizar o caminho usando /
 
         try:
@@ -70,8 +69,7 @@ class MainController:
                 self.select_existing_tab(filename)
 
         except Exception as e:
-            QMessageBox.critical(
-                self.view, "Erro", f"Erro ao ler arquivo: {str(e)}")
+            QMessageBox.critical(self.view, "Erro", f"Erro ao ler arquivo: {str(e)}")
 
     def open_folder(self, folder_path):
         try:
@@ -150,49 +148,45 @@ class MainController:
                     break
 
             if filename:
-                tokens = self.files_handler.analyze_file(filename)
-                self.update_display(tokens, display_name)
+                tokens, errors = self.files_handler.analyze_file(filename)  # Receber tokens e erros
+                self.update_display(tokens, errors, display_name)  # Passar erros também
 
                 file_tab = self.files_handler.files[filename]
                 file_tab.editor.highlighter.set_tokens(tokens)
                 file_tab.editor.highlighter.rehighlight()
 
     def analyze_all_files(self):
-        tokens = self.files_handler.analyze_all_files()
-        self.update_display(tokens, f"Todos os {len(self.files_handler.files)} arquivos")
+        tokens, errors = self.files_handler.analyze_all_files()  # Receber tokens e erros
+        self.update_display(tokens, errors, f"Todos os {len(self.files_handler.files)} arquivos")  # Passar erros
 
         for file_tab in self.files_handler.files.values():
             file_tab.editor.highlighter.set_tokens(file_tab.tokens)
             file_tab.editor.highlighter.rehighlight()
 
-    def update_display(self, tokens, source_name):
+    def update_display(self, tokens, errors, source_name):  # Adicionar parâmetro errors
         self.update_token_table(tokens)
-        self.update_statistics(tokens, source_name)
+        self.update_error_table(errors) 
+        self.update_statistics(tokens, errors, source_name)
         self.update_chart(tokens)
         self.update_details_table(tokens)
-
+    
     def update_token_table(self, tokens):
         self.view.token_table.clear()
         for token in tokens:
             item = QTreeWidgetItem([str(token.lineno), str(token.token_pos), token.type, token.value])
             self.view.token_table.addTopLevelItem(item)
 
-    def update_statistics(self, tokens, source_name):
-        stats_text = f"📊 ANÁLISE LÉXICA - {source_name.upper()}\n"
-        stats_text += "=" * 50 + "\n"
+    def update_error_table(self, errors):
+        """Atualiza a tabela de erros"""
+        self.view.error_table.update_errors(errors)
 
-        if tokens:
-            stats_text += f"• Total de tokens: {len(tokens)}\n"
-            stats_text += f"• Linhas processadas: {tokens[-1].lineno if tokens else 0}\n"
-            stats_text += f"• Tipos únicos de tokens: {len(set(token.type for token in tokens))}\n"
 
-            token_counts = collections.Counter(token.type for token in tokens)
-            most_common = token_counts.most_common(1)[0]
-            stats_text += f"• Token mais frequente: {most_common[0]} ({most_common[1]} ocorrências)\n"
-        else:
-            stats_text += "Nenhum token encontrado."
+    def update_statistics(self, tokens, errors, source_name):
+        token_count = len(tokens)
+        error_count = len(errors)
+        line_count = len(set(token.lineno for token in tokens))
 
-        self.view.stats_widget.setText(stats_text)
+        self.view.stats_widget.update_statistics(token_count, line_count, error_count)
 
     def update_chart(self, tokens):
         pass
@@ -245,12 +239,35 @@ class MainController:
         current_editor.setTextCursor(cursor)
         current_editor.setFocus()
 
+    def navigate_to_error(self, line_number, column_pos, character):
+        """Navega para a posição do erro no editor"""
+        current_editor = self.view.tab_widget.currentWidget()
+        if not current_editor:
+            return
+
+        cursor = current_editor.textCursor()
+        cursor.movePosition(cursor.Start)
+
+        # Mover para a linha do erro
+        for _ in range(line_number - 1):
+            cursor.movePosition(cursor.Down)
+        
+        # Mover para a coluna do erro
+        cursor.setPosition(cursor.block().position() + column_pos - 1)
+        
+        # Selecionar o caractere problemático se existir
+        if character:
+            cursor.setPosition(cursor.block().position() + column_pos - 1 + len(character), cursor.KeepAnchor)
+        
+        current_editor.setTextCursor(cursor)
+        current_editor.setFocus()
+    
     def clear_all(self):
         self.files_handler.clear_files()
         self.view.clear_all_tabs()
-        self.update_display([], "")
+        self.update_display([], [], "")  # Passar lista vazia de erros também
         # Restaurar file tree para diretório atual
         self.view.file_tree.set_root_path(QDir.currentPath())
-
+    
     def run(self):
         return self.app.exec_()
