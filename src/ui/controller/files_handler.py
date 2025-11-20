@@ -47,5 +47,5 @@ class FilesHandler:
     def tokenize(self, data):
         lexer = TontoLexer()
         tokens = list(lexer.tokenize(data))
-        errors = lexer.get_errors()
+        errors = tuple(lexer.errors)
         return tokens, errors
