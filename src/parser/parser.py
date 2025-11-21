@@ -4,11 +4,11 @@ import json
 
 
 def p_ontology(p):
-    '''ontology : importlist package_definition classlist'''
+    '''ontology : package_definition importlist classlist'''
     p[0] = {
-        'imports': p[1],
-        'package_name': p[2],
-        'classes': p[3]
+        'package_name': p[1],
+        'imports': p[2],
+        'classes': p[3],
     }
 
 
@@ -126,11 +126,18 @@ def p_relation(p):
     }
 
 
-# def p_specializes_member(p):
-#     '''specializes_member : IDENTIFIER SPECIALIZES_KW IDENTIFIER'''
-#     p[0] = {'child': p[1], 'parent': p[3]}
+def p_datatype(p):
+    '''datatype : NATIVE_TYPE
+                | USER_TYPE
+    '''
+    p[0] = p[1]
 
-
+def p_datatype_declarion(p):
+    '''datatype_declaration: DATATYPE_KW IDENTIFIER OPEN_BRACE attr_list CLOSE_BRACE'''
+    p[0] = {
+        'name': p[2],
+        'attributes': p[4],
+    }
 
 def p_cardinality(p):
     '''cardinality : OPEN_BRACKET MULTIPLICATION CLOSE_BRACKET
