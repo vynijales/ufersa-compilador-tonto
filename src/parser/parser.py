@@ -45,21 +45,37 @@ def p_classlist(p):
 
 
 def p_class(p):
-    '''class : CLASS_STEREOTYPE IDENTIFIER OPEN_BRACE class_body CLOSE_BRACE'''
+    '''class : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
     p[0] = {
         'class_type': p[1],
         'name': p[2],
-        'content': p[4],
+        'content': p[3],
     }
 
-
-def p_class_body(p):
-    '''class_body : attr_list relation_list'''
+def p_class_specialization(p):
+    '''class : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER optional_class_body'''
     p[0] = {
-        'attributes': p[1],
-        'relations': p[2],
+        'class_type': p[1],
+        'name': p[2],
+        'specializes': p[4],
+        'content': p[5],
     }
 
+
+def p_optional_class_body(p):
+    '''optional_class_body : OPEN_BRACE attr_list relation_list CLOSE_BRACE
+                           | empty
+    '''
+    if len(p) == 5:
+        p[0] = {
+            'atributes': p[2],
+            'relations': p[3],
+        }
+    else:
+        p[0] = {
+            'atributes': [],
+            'relations': [],
+        }
 
 def p_attr_list(p):
     '''
@@ -108,6 +124,12 @@ def p_relation(p):
         'cardinality_from': p[1],
         'cardinality_to': p[3],
     }
+
+
+# def p_specializes_member(p):
+#     '''specializes_member : IDENTIFIER SPECIALIZES_KW IDENTIFIER'''
+#     p[0] = {'child': p[1], 'parent': p[3]}
+
 
 
 def p_cardinality(p):
