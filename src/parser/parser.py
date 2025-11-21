@@ -4,18 +4,49 @@ import json
 
 
 def p_ontology(p):
-    '''ontology : package_definition importlist classlist'''
+    '''ontology : package imports declarations'''
+
     p[0] = {
         'package_name': p[1],
         'imports': p[2],
-        'classes': p[3],
+        'declarations': p[3],
     }
 
 
-def p_importlist(p):
+def p_declarations(p):
     '''
-    importlist : importlist import
-               | empty
+    declarations : declarations declaration
+                 | empty
+    '''
+    if len(p) == 3:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = []
+
+def p_declaration(p):
+    '''declaration : datatype_declaration
+                   | class_declaration
+    '''
+    p[0] = p[1]
+
+def p_datatype_declarion(p):
+    '''datatype_declaration : DATATYPE_KW USER_TYPE OPEN_BRACE attr_list CLOSE_BRACE'''
+    p[0] = {
+        'type': 'datatype',
+        'name': p[2],
+        'attributes': p[4],
+    }
+
+def p_datatype(p):
+    '''datatype : NATIVE_TYPE
+                | USER_TYPE
+    '''
+    p[0] = p[1]
+
+def p_imports(p):
+    '''
+    imports : imports import
+            | empty
     '''
     if len(p) == 3:
         p[0] = p[1] + [p[2]]
@@ -28,34 +59,22 @@ def p_import(p):
     p[0] = p[2]
 
 
-def p_package_definition(p):
-    '''package_definition : PACKAGE_KW IDENTIFIER'''
+def p_package(p):
+    '''package : PACKAGE_KW IDENTIFIER'''
     p[0] = p[2]
 
-
-def p_classlist(p):
-    '''
-    classlist : classlist class
-              | empty
-    '''
-    if len(p) == 3:
-        p[0] = p[1] + [p[2]]
-    else:
-        p[0] = []
-
-
-def p_class(p):
-    '''class : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
+def p_class_declaration(p):
+    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
     p[0] = {
-        'class_type': p[1],
+        'type': p[1],
         'name': p[2],
         'content': p[3],
     }
 
 def p_class_specialization(p):
-    '''class : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER optional_class_body'''
+    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER optional_class_body'''
     p[0] = {
-        'class_type': p[1],
+        'type': p[1],
         'name': p[2],
         'specializes': p[4],
         'content': p[5],
@@ -90,10 +109,10 @@ def p_attr_list(p):
 
 def p_attribute(p):
     '''
-    attribute : IDENTIFIER COLON NATIVE_TYPE
-              | IDENTIFIER COLON NATIVE_TYPE cardinality 
-              | IDENTIFIER COLON NATIVE_TYPE cardinality meta_attributes
-              | IDENTIFIER COLON NATIVE_TYPE meta_attributes
+    attribute : IDENTIFIER COLON datatype
+              | IDENTIFIER COLON datatype cardinality 
+              | IDENTIFIER COLON datatype cardinality meta_attributes
+              | IDENTIFIER COLON datatype meta_attributes
     '''
     p[0] = {
         'name': p[1],
@@ -125,19 +144,6 @@ def p_relation(p):
         'cardinality_to': p[3],
     }
 
-
-def p_datatype(p):
-    '''datatype : NATIVE_TYPE
-                | USER_TYPE
-    '''
-    p[0] = p[1]
-
-def p_datatype_declarion(p):
-    '''datatype_declaration: DATATYPE_KW IDENTIFIER OPEN_BRACE attr_list CLOSE_BRACE'''
-    p[0] = {
-        'name': p[2],
-        'attributes': p[4],
-    }
 
 def p_cardinality(p):
     '''cardinality : OPEN_BRACKET MULTIPLICATION CLOSE_BRACKET
