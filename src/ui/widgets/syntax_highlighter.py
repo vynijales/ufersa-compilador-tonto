@@ -1,5 +1,5 @@
 from PyQt5.QtGui import QTextCharFormat, QColor, QSyntaxHighlighter
-from lexer.lexer import SYMBOLS
+from lexer.lexer import KEYWORDS, SYMBOLS
 
 class SyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -26,6 +26,9 @@ class SyntaxHighlighter(QSyntaxHighlighter):
 
         for s in SYMBOLS.keys():
             self.token_colors[s] = QColor('#00FFFF')
+
+        for kw_type in set(KEYWORDS.values()):
+            self.token_colors[kw_type] = QColor('#F92672')
         
         self.highlighting_rules = []
 
