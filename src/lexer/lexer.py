@@ -32,6 +32,8 @@ KEYWORDS = {
     "package": "PACKAGE_KW",
     "import": "IMPORT_KW",
     "specializes": "SPECIALIZES_KW",
+    "datatype": "DATATYPE_KW",
+    "enum": "ENUM_KW",
 }
 
 CLASS_STEREOTYPES = [
@@ -47,7 +49,7 @@ RELATION_STEREOTYPES = [
     "subQualityOf", "instantiation", "termination", "participational",
     "participation", "historicalDependence", "creation", "manifestation",
     "bringsAbout", "triggers", "composition", "aggregation", "inherence",
-    "value", "formal", "constitution"
+    "value", "formal", "constitution", "relation"
 ]
 
 META_ATTRIBUTES = ["ordered", "const", "derived", "subsets", "redefines"]
