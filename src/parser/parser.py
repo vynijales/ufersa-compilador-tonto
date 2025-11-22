@@ -27,6 +27,7 @@ def p_declaration(p):
     '''declaration : datatype_declaration
                    | class_declaration
                    | enum_declaration
+                   | genset_declaration
     '''
     p[0] = p[1]
 
@@ -177,7 +178,63 @@ def p_enum_values(p):
         p[0] = p[1] + [p[3]]
     else:
         p[0] = [p[1]]
-    
+
+# ============== Genset ==============
+
+def p_genset_declaration(p):
+    '''genset_declaration : GENSET_KW IDENTIFIER OPEN_BRACE GENERAL_KW IDENTIFIER SPECIFICS_KW comma_separated_identifiers CLOSE_BRACE'''
+    p[0] = {
+        'type': 'genset',
+        'genset_restrictions': [],
+        'name': p[2],
+        'specifics': p[7],
+        'general': p[5],
+    }
+
+def p_genset_declaration_inline(p):
+    '''genset_declaration : optional_genset_restrictions GENSET_KW IDENTIFIER WHERE_KW comma_separated_identifiers SPECIALIZES_KW IDENTIFIER'''
+    p[0] = {
+        'type': 'genset',
+        'genset_restrictions': p[1],
+        'name': p[3],
+        'specifics': p[5],
+        'general': p[7],
+    }
+
+def p_optional_genset_restrictions(p):
+    '''
+    optional_genset_restrictions : optional_genset_restrictions genset_restriction
+                                 | empty
+    '''
+    if len(p) == 3:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = []
+
+def p_genset_restriction(p):
+    '''
+    genset_restriction : DISJOINT_KW
+                       | COMPLETE_KW
+                       | INCOMPLETE_KW
+                       | OVERLAPPING_KW
+    '''
+    p[0] = p[1]
+
+# Descrição: Essa regra define uma produção em que deve haver ao menos um
+# identificador. Se houver mais que um, devem estar separados por vírgula
+def p_comma_separated_identifiers(p):
+    '''
+    comma_separated_identifiers : comma_separated_identifiers COMMA IDENTIFIER
+                                | IDENTIFIER
+    '''
+
+    if len(p) == 4:
+        # Regra -> comma_separated_identifiers : comma_separated_identifiers COMMA IDENTIFIER
+        p[0] = p[1] + [p[3]]
+    else:
+        # Regra -> comma_separated_identifiers : IDENTIFIER
+        p[0] = [p[1]]
+
 
 def p_empty(p):
     '''empty :'''
@@ -190,7 +247,7 @@ def p_error(p):
         print(f'Token type: {p.type}')
     else:
         print("Syntax error: Unexpected end of input")
-    
+
 
 lexer = TontoLexer()
 parser = yacc.yacc()
