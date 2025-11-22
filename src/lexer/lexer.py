@@ -26,6 +26,8 @@ KEYWORDS = {
     "genset": "GENSET_KW",
     "disjoint": "DISJOINT_KW",
     "complete": "COMPLETE_KW",
+    "incomplete": "INCOMPLETE_KW",
+    "overlapping": "OVERLAPPING_KW",
     "general": "GENERAL_KW",
     "specifics": "SPECIFICS_KW",
     "where": "WHERE_KW",
