@@ -3,6 +3,14 @@ from parser.parser import parser
 teste1 = """
 package teste
 
+enum Color {
+    RED,
+    GREEN,
+    BLUE
+}
+
+enum Size { SMALL }
+
 datatype AddressDataType {
     street: string
     city: number
@@ -23,10 +31,22 @@ datatype CompanyDataType {
 def test_parser():
     result = parser.parse(teste1)
 
-    assert result == {
+    print ("Parser Result:", result)
+    
+    result_expected = {
     'package_name': 'teste',
     'imports': [],
     'declarations': [
+        {
+            'type': 'enum',
+            'name': 'Color',
+            'values': ['RED', 'GREEN', 'BLUE'],
+        },
+        {
+            'type': 'enum',
+            'name': 'Size',
+            'values': ['SMALL'],
+        },
         {
             'type': 'datatype',
             'name': 'AddressDataType',
@@ -54,8 +74,9 @@ def test_parser():
                 {'name': 'name', 'type': 'string'},
             ],
         },
-    ],
-}
+    ]}
+
+    assert result == result_expected
 
 if __name__ == "__main__":
     test_parser()

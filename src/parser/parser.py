@@ -26,6 +26,7 @@ def p_declarations(p):
 def p_declaration(p):
     '''declaration : datatype_declaration
                    | class_declaration
+                   | enum_declaration
     '''
     p[0] = p[1]
 
@@ -154,6 +155,29 @@ def p_cardinality(p):
     # Retorna uma representação de string ou objeto da cardinalidade
     p[0] = ''.join(p[1:])
 
+
+def p_enum_declaration(p):
+    '''enum_declaration : ENUM_KW IDENTIFIER OPEN_BRACE enum_values CLOSE_BRACE'''
+    p[0] = {
+        'type': 'enum',
+        'name': p[2],
+        'values': p[4],
+    }
+
+def p_enum_value(p):
+    '''enum_value : IDENTIFIER'''
+    p[0] = p[1]
+
+def p_enum_values(p):
+    '''
+    enum_values : enum_values COMMA enum_value
+                | enum_value
+    '''
+    if len(p) == 4:
+        p[0] = p[1] + [p[3]]
+    else:
+        p[0] = [p[1]]
+    
 
 def p_empty(p):
     '''empty :'''
