@@ -2,10 +2,10 @@ from ply import yacc
 from lexer.lexer import tokens, TontoLexer
 import json
 
+# =========== Ontology ===========
 
 def p_ontology(p):
     '''ontology : package imports declarations'''
-
     p[0] = {
         'package_name': p[1],
         'imports': p[2],
@@ -23,6 +23,7 @@ def p_declarations(p):
     else:
         p[0] = []
 
+
 def p_declaration(p):
     '''declaration : datatype_declaration
                    | class_declaration
@@ -30,6 +31,7 @@ def p_declaration(p):
                    | genset_declaration
     '''
     p[0] = p[1]
+
 
 def p_datatype_declarion(p):
     '''datatype_declaration : DATATYPE_KW USER_TYPE OPEN_BRACE attr_list CLOSE_BRACE'''
@@ -39,11 +41,13 @@ def p_datatype_declarion(p):
         'attributes': p[4],
     }
 
+
 def p_datatype(p):
     '''datatype : NATIVE_TYPE
                 | USER_TYPE
     '''
     p[0] = p[1]
+
 
 def p_imports(p):
     '''
@@ -65,6 +69,8 @@ def p_package(p):
     '''package : PACKAGE_KW IDENTIFIER'''
     p[0] = p[2]
 
+# ============== Class ==============
+
 def p_class_declaration(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
     p[0] = {
@@ -72,6 +78,7 @@ def p_class_declaration(p):
         'name': p[2],
         'content': p[3],
     }
+
 
 def p_class_specialization(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER optional_class_body'''
@@ -98,6 +105,7 @@ def p_optional_class_body(p):
             'relations': [],
         }
 
+
 def p_attr_list(p):
     '''
     attr_list : attr_list attribute
@@ -112,7 +120,7 @@ def p_attr_list(p):
 def p_attribute(p):
     '''
     attribute : IDENTIFIER COLON datatype
-              | IDENTIFIER COLON datatype cardinality 
+              | IDENTIFIER COLON datatype cardinality
               | IDENTIFIER COLON datatype cardinality meta_attributes
               | IDENTIFIER COLON datatype meta_attributes
     '''
@@ -156,6 +164,7 @@ def p_cardinality(p):
     # Retorna uma representação de string ou objeto da cardinalidade
     p[0] = ''.join(p[1:])
 
+# =============== Enum ===============
 
 def p_enum_declaration(p):
     '''enum_declaration : ENUM_KW IDENTIFIER OPEN_BRACE enum_values CLOSE_BRACE'''
@@ -165,9 +174,11 @@ def p_enum_declaration(p):
         'values': p[4],
     }
 
+
 def p_enum_value(p):
     '''enum_value : IDENTIFIER'''
     p[0] = p[1]
+
 
 def p_enum_values(p):
     '''
