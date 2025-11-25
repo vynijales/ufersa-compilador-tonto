@@ -10,7 +10,7 @@ SYMBOLS = {
     'OPEN_BRACE':'{',
     'CLOSE_BRACE':'}',
     'RANGE':'..',
-    
+
     'AGGREGATION':'<>--',
     'AGGREGATION_INVERSE':'--<>',
     'COMPOSITION': '<o>--',
@@ -36,6 +36,7 @@ KEYWORDS = {
     "specializes": "SPECIALIZES_KW",
     "datatype": "DATATYPE_KW",
     "enum": "ENUM_KW",
+    "relation": "RELATION_KW",
 }
 
 CLASS_STEREOTYPES = [
@@ -51,7 +52,7 @@ RELATION_STEREOTYPES = [
     "subQualityOf", "instantiation", "termination", "participational",
     "participation", "historicalDependence", "creation", "manifestation",
     "bringsAbout", "triggers", "composition", "aggregation", "inherence",
-    "value", "formal", "constitution", "relation"
+    "value", "formal", "constitution",
 ]
 
 META_ATTRIBUTES = ["ordered", "const", "derived", "subsets", "redefines"]
@@ -101,7 +102,7 @@ tokens = [
     'AT',
     'AGGREGATION',
     'AGGREGATION_INVERSE',
-    
+
     'COMPOSITION',
     'COMPOSITION_INVERSE',
     'DOUBLE_DASH',
@@ -144,7 +145,7 @@ class TontoLexer:
     t_COMPOSITION_INVERSE = r'--<o>'
     t_DOUBLE_DASH = r'--'
     t_RANGE = r'\.\.'
-    
+
     t_OPEN_PAREN = r'\('
     t_CLOSE_PAREN = r'\)'
     t_OPEN_BRACKET = r'\['
