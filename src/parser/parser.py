@@ -161,13 +161,13 @@ def p_relation_list(p):
         p[0] = []
 
 
-def p_relation(p):
-    '''relation : cardinality DOUBLE_DASH cardinality IDENTIFIER'''
-    p[0] = {
-        'name': p[4],
-        'cardinality_from': p[1],
-        'cardinality_to': p[3],
-    }
+# def p_relation(p):
+#     '''relation : cardinality DOUBLE_DASH cardinality IDENTIFIER'''
+#     p[0] = {
+#         'name': p[4],
+#         'cardinality_from': p[1],
+#         'cardinality_to': p[3],
+#     }
 
 
 # Define cardinalidade de atributos e relações
@@ -177,7 +177,6 @@ def p_cardinality(p):
                    | OPEN_BRACKET NUMBER RANGE NUMBER CLOSE_BRACKET
                    | OPEN_BRACKET NUMBER RANGE MULTIPLICATION CLOSE_BRACKET
     '''
-    # Retorna uma representação de string ou objeto da cardinalidade
     p[0] = ''.join(p[1:])
 
 # =============== Enum ===============
@@ -275,6 +274,106 @@ def p_comma_separated_identifiers(p):
         p[0] = [p[1]]
 
 
+# ============== Relations ==============
+
+
+# Declaração de relação interna (dentro de uma classe)
+def p_relation_internal(p):
+    """
+    relation_internal : AT RELATION_STEREOTYPE cardinality relation_connector cardinality IDENTIFIER
+    """
+    p[0] = {
+        "type": "relation_internal",
+        "relation_stereotype": p[2],
+        "connector": p[4],
+        "domain": None,
+        "domain_cardinality": p[3],
+        "image": p[6],
+        "image_cardinality": p[5],
+    }
+
+
+# Declaração de relações externa (fora do corpo das classes)
+def p_relation_external(p):
+    """
+    relation_external : AT RELATION_STEREOTYPE RELATION_KW IDENTIFIER cardinality relation_connector cardinality IDENTIFIER
+    """
+    p[0] = {
+        "type": "relation_external",
+        "relation_stereotype": p[2],
+        "connector": p[6],
+        "domain": p[4],
+        "domain_cardinality": p[5],
+        "image": p[8],
+        "image_cardinality": p[7],
+    }
+
+
+# Conector de relação sem rótulo
+def p_relation_connector_unlabeled(p):
+    """
+    relation_connector : relation_connector_start
+                       | relation_connector_end
+                       | DOUBLE_DASH
+    """
+    p[0] = {
+        "type": "relation_connector",
+        "label": None,
+        "connector": p[1]
+    }
+
+# Conector de relação com rótulo à esquerda (agregação/composição).
+# "<>-- rel_name --"   (agregação)
+# "<o>-- rel_name --"  (composição)
+def p_relation_connector_labeled_left(p):
+    """
+    relation_connector : relation_connector_start IDENTIFIER DOUBLE_DASH
+    """
+
+    p[0] = {
+        "type": "relation_connector",
+        "label": p[2],
+        "connector": p[1]
+    }
+
+
+# Conector de relação à direita com rótulo.
+# "-- name --<>"   (agregação)
+# "-- name --<o>"  (composição)
+# "-- name --"     (associação)
+def p_relation_connector_labeled_right(p):
+    """
+    relation_connector : DOUBLE_DASH IDENTIFIER relation_connector_end
+                       | DOUBLE_DASH IDENTIFIER DOUBLE_DASH
+    """
+    p[0] = {
+        "type": "relation_connector",
+        "label": p[2],
+        "connector": p[3]
+    }
+
+
+# Conectores de início de relação (agregação/composição)
+def p_relation_connector_symbol(p):
+    """
+    relation_connector_start : AGGREGATION
+                             | COMPOSITION
+    """
+    p[0] = p[1]
+
+
+# Conectores de fim de relação (agregação/composição inversa)
+def p_relation_connector_symbol_inverse(p):
+    """
+    relation_connector_end : AGGREGATION_INVERSE
+                           | COMPOSITION_INVERSE
+    """
+    p[0] = p[1]
+
+
+# ============= Parser Utils ==============
+
+# Regra para produções vazias
 def p_empty(p):
     '''empty :'''
     pass
