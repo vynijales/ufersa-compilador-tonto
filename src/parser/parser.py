@@ -1,11 +1,13 @@
 from ply import yacc
-from lexer.lexer import tokens, TontoLexer
+from lexer.lexer import Token, tokens, TontoLexer
 
 # =========== Ontology ===========
 
 # Regra principal que define a estrutura de uma ontologia
 def p_ontology(p):
     '''ontology : package imports declarations'''
+    # TODO: A definição de package deve ser opcional
+
     p[0] = {
         'package_name': p[1],
         'imports': p[2],
@@ -82,6 +84,9 @@ def p_package(p):
 # Declaração de classe
 def p_class_declaration(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
+    # TODO: o corpo de uma classe deve conter alguma definioção (atributos ou relações)
+    # Caso a classe não possua declarações não declare um corpo sem atributos (chaves vazias)
+    
     p[0] = {
         'type': p[1],
         'name': p[2],
@@ -179,11 +184,15 @@ def p_cardinality(p):
     '''
     p[0] = ''.join(p[1:])
 
+
 # =============== Enum ===============
+
 
 # Declaração de enumeração
 def p_enum_declaration(p):
     '''enum_declaration : ENUM_KW IDENTIFIER OPEN_BRACE enum_values CLOSE_BRACE'''
+    # TODO: o identificador de instancia deve terminar com um número
+
     p[0] = {
         'type': 'enum',
         'name': p[2],
@@ -207,6 +216,7 @@ def p_enum_values(p):
         p[0] = p[1] + [p[3]]
     else:
         p[0] = [p[1]]
+
 
 # ============== Genset ==============
 
@@ -373,6 +383,14 @@ def p_relation_connector_symbol_inverse(p):
 
 # ============= Parser Utils ==============
 
+
+def p_catch_error(p):
+    """
+    catch : error
+    """
+    print(p[1])
+
+
 # Regra para produções vazias
 def p_empty(p):
     '''empty :'''
@@ -384,6 +402,7 @@ def p_error(p):
     if p:
         print(f"Syntax error at {p.value!r} in line {p.lineno}")
         print(f'Token type: {p.type}')
+        parser.errok()
     else:
         print("Syntax error: Unexpected end of input")
 
