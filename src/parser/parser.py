@@ -81,46 +81,76 @@ def p_package(p):
 
 # ============== Class ==============
 
-# Declaração de classe
 def p_class_declaration(p):
-    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER optional_class_body'''
-    # TODO: o corpo de uma classe deve conter alguma definioção (atributos ou relações)
-    # Caso a classe não possua declarações não declare um corpo sem atributos (chaves vazias)
+    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER class_body
+                         | CLASS_STEREOTYPE IDENTIFIER 
+    '''
+
+    if len(p) == 4:
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'content': p[3],
+        }
+    else:
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'content': None,
+        }
     
+def p_class_body(p): 
+    '''class_body : OPEN_BRACE class_attribute_and_relation_list CLOSE_BRACE'''
+
+    attributes = []
+    relations = []
+
+    for item in p[2]:
+        if item['type'] == 'attribute':
+            attributes.append(item)
+        elif item['type'] == 'relation_internal':
+            relations.append(item)
+
     p[0] = {
-        'type': p[1],
-        'name': p[2],
-        'content': p[3],
+        'attributes': attributes,
+        'relations': relations,
     }
+
+
+def p_class_attribute_and_relation_list(p):
+    '''class_attribute_and_relation_list : class_attribute_and_relation class_attribute_and_relation_list
+                                         | class_attribute_and_relation
+    '''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_class_attribute_and_relation(p):
+    '''class_attribute_and_relation : attribute
+                                    | relation_internal
+ ''' 
 
 
 # Declaração de classe com herança/especialização
 def p_class_specialization(p):
-    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER optional_class_body'''
-    p[0] = {
-        'type': p[1],
-        'name': p[2],
-        'specializes': p[4],
-        'content': p[5],
-    }
-
-
-# Corpo opcional da classe com atributos e relações
-def p_optional_class_body(p):
-    '''optional_class_body : OPEN_BRACE attr_list relation_list CLOSE_BRACE
-                           | empty
+    '''class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER class_body
+                         | CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER
     '''
-    if len(p) == 5:
+    if len(p) == 6:
         p[0] = {
-            'atributes': p[2],
-            'relations': p[3],
+            'type': p[1],
+            'name': p[2],
+            'specializes': p[4],
+            'content': p[5],
         }
     else:
         p[0] = {
-            'atributes': [],
-            'relations': [],
+            'type': p[1],
+            'name': p[2],
+            'specializes': p[4],
+            'content': None,
         }
-
 
 # Lista de atributos de uma classe
 def p_attr_list(p):
