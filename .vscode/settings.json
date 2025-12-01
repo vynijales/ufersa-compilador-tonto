@@ -10,5 +10,9 @@
     "files.watcherExclude": {
         "**/examplos/**/*.tonto": true
     },
-    "terminal.integrated.defaultProfile.linux": "fish"
+    "terminal.integrated.defaultProfile.linux": "fish",
+    "editor.codeActionsOnSave": {
+        "source.unusedImports": "always",
+    },
+    "python.analysis.autoImportCompletions": true
 }

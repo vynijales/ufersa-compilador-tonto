@@ -1,9 +1,10 @@
 from ply import yacc
-from core.models import OntologyError, OntologyWarning
 from lexer.lexer import Token, tokens, TontoLexer
 
-errors: list[OntologyError] = []
-warnings: list[OntologyWarning] = []
+_ = Token, tokens
+
+errors = []
+warnings = []
 
 # =========== Ontology ===========
 
@@ -12,22 +13,31 @@ def p_ontology(p):
     '''ontology : package imports declarations
                 | imports declarations
     '''
+    package_name = None
+    imports = []
+    declarations = []
 
     if len(p) == 4:
-        p[0] = {
-            'package_name': p[1],
-            'imports': p[2],
-            'declarations': p[3],
-        }
+        package_name = p[1]
+        imports = p[2]
+        declarations = p[3]
     elif len(p) == 3:
-        warnings.append(OntologyWarning(0, 0, "No package declared"))
+        imports = p[1]
+        declarations = p[2]
 
-        p[0] = {
-            'package_name': None,
-            'imports': p[1],
-            'declarations': p[2],
-        }
+        warnings.append({
+            'line': 0,
+            'column': 0,
+            'message': "No package declaration found.",
+        })
 
+    p[0] = {
+        'package': package_name,
+        'imports': imports,
+        'declarations': declarations,
+        'errors': errors,
+        'warnings': warnings,
+    }
 
 # Lista de declarações (classes, enums, gensets, etc.)
 def p_declarations(p):
@@ -189,6 +199,10 @@ def p_attribute(p):
     p[0] = {
         'name': p[1],
         'type': p[3],
+        'position': {
+            'column': p[1].lineno(1),
+            'line': p[1].lineno(1),
+        }
     }
 
 
