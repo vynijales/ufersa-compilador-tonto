@@ -1,11 +1,14 @@
 {
     "files.exclude": {
-        "**/examplos/**/*.tonto": true
+        "**/examplos/**/*.tonto": true,
+        "**/__pycache__": true,
+        "node_modules": true
     },
     "search.exclude": {
         "**/examplos/**/*.tonto": true
     },
     "files.watcherExclude": {
         "**/examplos/**/*.tonto": true
-    }
+    },
+    "terminal.integrated.defaultProfile.linux": "fish"
 }

@@ -1,18 +1,32 @@
 from ply import yacc
+from core.models import OntologyError, OntologyWarning
 from lexer.lexer import Token, tokens, TontoLexer
+
+errors: list[OntologyError] = []
+warnings: list[OntologyWarning] = []
 
 # =========== Ontology ===========
 
 # Regra principal que define a estrutura de uma ontologia
 def p_ontology(p):
-    '''ontology : package imports declarations'''
-    # TODO: A definição de package deve ser opcional
+    '''ontology : package imports declarations
+                | imports declarations
+    '''
 
-    p[0] = {
-        'package_name': p[1],
-        'imports': p[2],
-        'declarations': p[3],
-    }
+    if len(p) == 4:
+        p[0] = {
+            'package_name': p[1],
+            'imports': p[2],
+            'declarations': p[3],
+        }
+    elif len(p) == 3:
+        warnings.append(OntologyWarning(0, 0, "No package declared"))
+
+        p[0] = {
+            'package_name': None,
+            'imports': p[1],
+            'declarations': p[2],
+        }
 
 
 # Lista de declarações (classes, enums, gensets, etc.)
@@ -194,15 +208,6 @@ def p_relation_list(p):
         p[0] = p[1] + [p[2]]
     else:
         p[0] = []
-
-
-# def p_relation(p):
-#     '''relation : cardinality DOUBLE_DASH cardinality IDENTIFIER'''
-#     p[0] = {
-#         'name': p[4],
-#         'cardinality_from': p[1],
-#         'cardinality_to': p[3],
-#     }
 
 
 # Define cardinalidade de atributos e relações
