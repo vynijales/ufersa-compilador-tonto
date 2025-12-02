@@ -37,10 +37,11 @@ class OntologySummary:
         self.gensets: List[Dict] = []
         self.external_relations: List[Dict] = []
         
-    def add_class(self, name: str, stereotype: str, specializes=None):
+    def add_class(self, name: str, stereotype: str, specializes=None, category=None):
         if name not in self.classes:
             self.classes[name] = {
                 'stereotype': stereotype,
+                'category': category,
                 'attributes': [],
                 'relations': [],
                 'specializes': specializes
@@ -79,7 +80,10 @@ class OntologySummary:
         lines.append(f"\nCLASSES ({len(self.classes)}):")
         if self.classes:
             for class_name, class_info in self.classes.items():
-                lines.append(f"\n  • {class_name} [{class_info['stereotype']}]")
+                stereotype_str = class_info['stereotype']
+                if class_info.get('category'):
+                    stereotype_str += f" of {class_info['category']}"
+                lines.append(f"\n  • {class_name} [{stereotype_str}]")
                 if class_info['specializes']:
                     lines.append(f"    Especializa: {class_info['specializes']}")
                 lines.append(f"    Atributos ({len(class_info['attributes'])}):")
@@ -317,10 +321,10 @@ def p_ontology(p):
         if decl['type'] in ['kind', 'category', 'subkind', 'role', 'phase', 'mixin', 
                             'roleMixin', 'phaseMixin', 'mode', 'quality', 'collective',
                             'quantity', 'event', 'situation', 'process', 'historicalRole',
-                            'historicalRoleMixin', 'intrinsicMode', 'extrinsicMode']:
+                            'historicalRoleMixin', 'intrinsicMode', 'extrinsicMode', 'relator']:
             # É uma classe
             current_class = decl['name']
-            summary.add_class(decl['name'], decl['type'], decl.get('specializes'))
+            summary.add_class(decl['name'], decl['type'], decl.get('specializes'), decl.get('category'))
             
             if decl.get('content'):
                 for attr in decl['content'].get('attributes', []):
@@ -418,6 +422,8 @@ def p_package(p):
 def p_class_declaration(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER class_body
                          | CLASS_STEREOTYPE IDENTIFIER 
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY class_body
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY
     '''
 
     if len(p) == 4:
@@ -426,10 +432,24 @@ def p_class_declaration(p):
             'name': p[2],
             'content': p[3],
         }
-    else:
+    elif len(p) == 3:
         p[0] = {
             'type': p[1],
             'name': p[2],
+            'content': None,
+        }
+    elif len(p) == 6:
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'category': p[4],
+            'content': p[5],
+        }
+    else:  # len(p) == 5
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'category': p[4],
             'content': None,
         }
     
@@ -471,6 +491,8 @@ def p_class_attribute_and_relation(p):
 def p_class_specialization(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER class_body
                          | CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW IDENTIFIER class_body
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW IDENTIFIER
     '''
     if len(p) == 6:
         p[0] = {
@@ -479,11 +501,27 @@ def p_class_specialization(p):
             'specializes': p[4],
             'content': p[5],
         }
-    else:
+    elif len(p) == 5:
         p[0] = {
             'type': p[1],
             'name': p[2],
             'specializes': p[4],
+            'content': None,
+        }
+    elif len(p) == 8:
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'category': p[4],
+            'specializes': p[6],
+            'content': p[7],
+        }
+    else:  # len(p) == 7
+        p[0] = {
+            'type': p[1],
+            'name': p[2],
+            'category': p[4],
+            'specializes': p[6],
             'content': None,
         }
 

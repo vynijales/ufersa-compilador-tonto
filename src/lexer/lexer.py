@@ -37,13 +37,14 @@ KEYWORDS = {
     "datatype": "DATATYPE_KW",
     "enum": "ENUM_KW",
     "relation": "RELATION_KW",
+    "of": "OF_KW",
 }
 
 CLASS_STEREOTYPES = [
     'event', 'situation', 'process', 'category', 'mixin', 'phaseMixin',
     'roleMixin', 'historicalRoleMixin', 'kind', 'collective', 'quantity',
     'quality', 'mode', 'intrinsicMode', 'extrinsicMode', 'subkind', 'phase',
-    'role', 'historicalRole'
+    'role', 'historicalRole', 'relator'
 ]
 
 RELATION_STEREOTYPES = [
@@ -60,12 +61,15 @@ NATIVE_TYPES = ["number", "string", "boolean", "date", "time", "datetime"]
 
 # Termos com hífens exigem tratamento especial regex para não quebrar no '-'
 HYPHENATED_TERMS = {
-    "functional-complexes": "FUNCTIONAL_COMPLEXES_KW",
-    "intrinsic-modes": "CLASS_STEREOTYPE", # Legado
-    "extrinsic-modes": "CLASS_STEREOTYPE", # Legado
-    "intrinsic-mode": "CLASS_STEREOTYPE",  # Legado
-    "extrinsic-mode": "CLASS_STEREOTYPE",  # Legado
+    "functional-complexes": "ONTOLOGICAL_CATEGORY",
+    "intrinsic-modes": "ONTOLOGICAL_CATEGORY",
+    "extrinsic-modes": "ONTOLOGICAL_CATEGORY",
+    "intrinsic-mode": "CLASS_STEREOTYPE",  # Legado - estereótipo individual
+    "extrinsic-mode": "CLASS_STEREOTYPE",  # Legado - estereótipo individual
 }
+
+# Categorias ontológicas (incluindo as sem hífen)
+ONTOLOGICAL_CATEGORIES = ["relators"]
 
 # Construção do Mapa de Palavras Reservadas
 RESERVED: Dict[str, str] = KEYWORDS.copy()
@@ -78,6 +82,8 @@ for s in META_ATTRIBUTES:
     RESERVED[s] = 'META_ATTRIBUTES'
 for s in NATIVE_TYPES:
     RESERVED[s] = 'NATIVE_TYPE'
+for s in ONTOLOGICAL_CATEGORIES:
+    RESERVED[s] = 'ONTOLOGICAL_CATEGORY'
 
 # Lista de Tokens
 tokens = [
@@ -106,7 +112,7 @@ tokens = [
     'COMPOSITION',
     'COMPOSITION_INVERSE',
     'DOUBLE_DASH',
-    'FUNCTIONAL_COMPLEXES_KW',
+    'ONTOLOGICAL_CATEGORY',
     'ERROR'
 ] + list(set(KEYWORDS.values()))
 
