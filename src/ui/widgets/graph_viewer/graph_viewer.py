@@ -1,6 +1,6 @@
 from PyQt5.QtCore import QPointF, Qt
 
-from parser.parser import parser
+from parser.parser import parse_ontology
 from ui.widgets.graph_viewer.edge_item import EdgeItem
 from ui.widgets.graph_viewer.graph_viewer_core import GraphViewerCore
 from ui.widgets.graph_viewer.node_item import NodeItem
@@ -278,13 +278,19 @@ class GraphViewer(GraphViewerCore):
 
     def setText(self, text: str):
         self.text = text
-        ast = parser.parse(text)
-        self.load_graph(ast)
+        result = parse_ontology(text)
+        self.load_graph(result)
 
     def toPlainText(self):
         return self.text
 
-    def load_graph(self, ast_root):
+    def load_graph(self, result):
+        # Extrai apenas a AST do resultado
+        ast_root = {
+            'package': result.get('package'),
+            'imports': result.get('imports'),
+            'declarations': result.get('declarations')
+        }
         converter = ASTConverter()
         adjacency_list = converter.convert_ast_to_adjacency_list(ast_root)
         self.load_graph_from_json_data(adjacency_list)

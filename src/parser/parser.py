@@ -1,10 +1,183 @@
 from ply import yacc
 from lexer.lexer import Token, tokens, TontoLexer
+from dataclasses import dataclass
+from typing import List, Dict, Any
 
 _ = Token, tokens
 
 errors = []
 warnings = []
+
+@dataclass
+class ParseError:
+    """Representa um erro léxico ou sintático encontrado durante o parsing"""
+    line: int
+    column: int
+    message: str
+    error_type: str  # 'LEXICAL' ou 'SYNTACTIC'
+    suggestion: str = ""
+    
+    def __str__(self):
+        error_label = "ERRO LÉXICO" if self.error_type == "LEXICAL" else "ERRO SINTÁTICO"
+        result = f"[{error_label} - Linha {self.line}, Coluna {self.column}]\n"
+        result += f"  Mensagem: {self.message}"
+        if self.suggestion:
+            result += f"\n  Sugestão: {self.suggestion}"
+        return result
+
+class OntologySummary:
+    """Coleta estatísticas sobre os construtos da ontologia"""
+    def __init__(self):
+        self.package_name: str = None
+        self.imports: List[str] = []
+        self.classes: Dict[str, Dict] = {}  # {nome: {stereotype, attributes, relations, specializes}}
+        self.datatypes: List[str] = []
+        self.enums: Dict[str, List[str]] = {}  # {nome: [valores]}
+        self.gensets: List[Dict] = []
+        self.external_relations: List[Dict] = []
+        
+    def add_class(self, name: str, stereotype: str, specializes=None):
+        if name not in self.classes:
+            self.classes[name] = {
+                'stereotype': stereotype,
+                'attributes': [],
+                'relations': [],
+                'specializes': specializes
+            }
+    
+    def add_attribute_to_class(self, class_name: str, attr_name: str, attr_type: str):
+        if class_name in self.classes:
+            self.classes[class_name]['attributes'].append({'name': attr_name, 'type': attr_type})
+    
+    def add_relation_to_class(self, class_name: str, relation: Dict):
+        if class_name in self.classes:
+            self.classes[class_name]['relations'].append(relation)
+    
+    def get_summary_table(self) -> str:
+        """Gera tabela de síntese formatada"""
+        lines = []
+        lines.append("="*80)
+        lines.append("TABELA DE SÍNTESE DA ONTOLOGIA")
+        lines.append("="*80)
+        
+        # Pacote
+        if self.package_name:
+            lines.append(f"\nPACOTE: {self.package_name}")
+        else:
+            lines.append("\nPACOTE: (não declarado)")
+        
+        # Imports
+        lines.append(f"\nIMPORTS ({len(self.imports)}):")
+        if self.imports:
+            for imp in self.imports:
+                lines.append(f"  - {imp}")
+        else:
+            lines.append("  (nenhum)")
+        
+        # Classes
+        lines.append(f"\nCLASSES ({len(self.classes)}):")
+        if self.classes:
+            for class_name, class_info in self.classes.items():
+                lines.append(f"\n  • {class_name} [{class_info['stereotype']}]")
+                if class_info['specializes']:
+                    lines.append(f"    Especializa: {class_info['specializes']}")
+                lines.append(f"    Atributos ({len(class_info['attributes'])}):")
+                for attr in class_info['attributes']:
+                    lines.append(f"      - {attr['name']}: {attr['type']}")
+                lines.append(f"    Relações internas ({len(class_info['relations'])}):")
+                for rel in class_info['relations']:
+                    lines.append(f"      - {rel['relation_stereotype']} -> {rel['image']}")
+        else:
+            lines.append("  (nenhuma)")
+        
+        # Datatypes
+        lines.append(f"\nDATATYPES ({len(self.datatypes)}):")
+        if self.datatypes:
+            for dt in self.datatypes:
+                lines.append(f"  - {dt}")
+        else:
+            lines.append("  (nenhum)")
+        
+        # Enums
+        lines.append(f"\nENUMS ({len(self.enums)}):")
+        if self.enums:
+            for enum_name, values in self.enums.items():
+                lines.append(f"  • {enum_name}: {', '.join(values)}")
+        else:
+            lines.append("  (nenhum)")
+        
+        # Gensets
+        lines.append(f"\nGENERALIZATION SETS ({len(self.gensets)}):")
+        if self.gensets:
+            for genset in self.gensets:
+                restrictions = ', '.join(genset['genset_restrictions']) if genset['genset_restrictions'] else 'nenhuma'
+                lines.append(f"  • {genset['name']}: {genset['general']} -> {', '.join(genset['specifics'])}")
+                lines.append(f"    Restrições: {restrictions}")
+        else:
+            lines.append("  (nenhum)")
+        
+        # Relações externas
+        lines.append(f"\nRELAÇÕES EXTERNAS ({len(self.external_relations)}):")
+        if self.external_relations:
+            for rel in self.external_relations:
+                lines.append(f"  • {rel['relation_stereotype']}: {rel['domain']} -> {rel['image']}")
+        else:
+            lines.append("  (nenhuma)")
+        
+        lines.append("\n" + "="*80)
+        return "\n".join(lines)
+
+class ErrorReport:
+    """Gerencia o relatório de erros léxicos e sintáticos"""
+    def __init__(self):
+        self.lexical_errors: List[ParseError] = []
+        self.syntactic_errors: List[ParseError] = []
+    
+    def add_lexical_error(self, line: int, column: int, message: str, suggestion: str = ""):
+        self.lexical_errors.append(ParseError(line, column, message, "LEXICAL", suggestion))
+    
+    def add_syntactic_error(self, line: int, column: int, message: str, suggestion: str = ""):
+        self.syntactic_errors.append(ParseError(line, column, message, "SYNTACTIC", suggestion))
+    
+    def has_errors(self) -> bool:
+        return len(self.lexical_errors) > 0 or len(self.syntactic_errors) > 0
+    
+    def get_error_report(self) -> str:
+        """Gera relatório de erros formatado"""
+        lines = []
+        lines.append("="*80)
+        lines.append("RELATÓRIO DE ERROS DA ONTOLOGIA")
+        lines.append("="*80)
+        
+        # Erros léxicos
+        if self.lexical_errors:
+            lines.append(f"\nERROS LÉXICOS ({len(self.lexical_errors)}):")
+            lines.append("-" * 80)
+            for error in self.lexical_errors:
+                lines.append("\n" + str(error))
+        else:
+            lines.append("\nERROS LÉXICOS: Nenhum erro léxico encontrado.")
+        
+        # Erros sintáticos
+        if self.syntactic_errors:
+            lines.append(f"\n\nERROS SINTÁTICOS ({len(self.syntactic_errors)}):")
+            lines.append("-" * 80)
+            for error in self.syntactic_errors:
+                lines.append("\n" + str(error))
+        else:
+            lines.append("\n\nERROS SINTÁTICOS: Nenhum erro sintático encontrado.")
+        
+        lines.append("\n" + "="*80)
+        
+        if not self.has_errors():
+            lines.append("\n✓ Análise léxica e sintática concluída sem erros!")
+            lines.append("="*80)
+        
+        return "\n".join(lines)
+
+# Instâncias globais
+summary = OntologySummary()
+error_report = ErrorReport()
 
 # =========== Ontology ===========
 
@@ -25,18 +198,46 @@ def p_ontology(p):
         imports = p[1]
         declarations = p[2]
 
-        warnings.append({
-            'line': 0,
-            'column': 0,
-            'message': "No package declaration found.",
-        })
+    # Preencher sumário
+    summary.package_name = package_name
+    summary.imports = imports
+    
+    # Processar declarações para coleta de estatísticas
+    current_class = None
+    for decl in declarations:
+        if decl['type'] in ['kind', 'category', 'subkind', 'role', 'phase', 'mixin', 
+                            'roleMixin', 'phaseMixin', 'mode', 'quality', 'collective',
+                            'quantity', 'event', 'situation', 'process', 'historicalRole',
+                            'historicalRoleMixin', 'intrinsicMode', 'extrinsicMode']:
+            # É uma classe
+            current_class = decl['name']
+            summary.add_class(decl['name'], decl['type'], decl.get('specializes'))
+            
+            if decl.get('content'):
+                for attr in decl['content'].get('attributes', []):
+                    summary.add_attribute_to_class(current_class, attr['name'], attr['datatype'])
+                for rel in decl['content'].get('relations', []):
+                    summary.add_relation_to_class(current_class, rel)
+        
+        elif decl['type'] == 'datatype':
+            summary.datatypes.append(decl['name'])
+        
+        elif decl['type'] == 'enum':
+            summary.enums[decl['name']] = decl['values']
+        
+        elif decl['type'] == 'genset':
+            summary.gensets.append(decl)
+        
+        elif decl['type'] == 'relation_external':
+            summary.external_relations.append(decl)
 
     p[0] = {
         'package': package_name,
         'imports': imports,
         'declarations': declarations,
-        'errors': errors,
-        'warnings': warnings,
+        'summary': summary.get_summary_table(),
+        'error_report': error_report.get_error_report(),
+        'has_errors': error_report.has_errors(),
     }
 
 # Lista de declarações (classes, enums, gensets, etc.)
@@ -153,7 +354,8 @@ def p_class_attribute_and_relation_list(p):
 def p_class_attribute_and_relation(p):
     '''class_attribute_and_relation : attribute
                                     | relation_internal
- ''' 
+    '''
+    p[0] = p[1] 
 
 
 # Declaração de classe com herança/especialização
@@ -197,12 +399,9 @@ def p_attribute(p):
               | IDENTIFIER COLON datatype meta_attributes
     '''
     p[0] = {
+        'type': 'attribute',
         'name': p[1],
-        'type': p[3],
-        'position': {
-            'column': p[1].lineno(1),
-            'line': p[1].lineno(1),
-        }
+        'datatype': p[3],
     }
 
 
@@ -449,12 +648,83 @@ def p_empty(p):
 # Trata erros sintáticos durante o parsing
 def p_error(p):
     if p:
-        print(f"Syntax error at {p.value!r} in line {p.lineno}")
-        print(f'Token type: {p.type}')
+        error_report.add_syntactic_error(
+            line=p.lineno,
+            column=0,
+            message=f"Token inesperado '{p.value}' do tipo {p.type}",
+            suggestion="Verifique a sintaxe próxima a este token. Pode estar faltando um delimitador ou palavra-chave."
+        )
         parser.errok()
     else:
-        print("Syntax error: Unexpected end of input")
+        error_report.add_syntactic_error(
+            line=0,
+            column=0,
+            message="Fim de arquivo inesperado",
+            suggestion="Verifique se todos os blocos foram fechados corretamente com '}' e se a sintaxe está completa."
+        )
 
 
 lexer = TontoLexer()
 parser = yacc.yacc()
+
+def parse_ontology(data: str) -> Dict[str, Any]:
+    """
+    Realiza o parsing de uma ontologia Tonto e retorna a árvore sintática,
+    tabela de síntese e relatório de erros.
+    
+    Args:
+        data: Código fonte da ontologia em formato string
+    
+    Returns:
+        Dicionário contendo:
+        - ast: Árvore sintática abstrata
+        - summary: Tabela de síntese formatada
+        - error_report: Relatório de erros formatado
+        - has_errors: Boolean indicando se há erros
+    """
+    # Resetar estado global
+    global summary, error_report
+    summary = OntologySummary()
+    error_report = ErrorReport()
+    
+    # Processar erros léxicos
+    lexer_instance = TontoLexer()
+    list(lexer_instance.tokenize(data))  # Força tokenização para coletar erros
+    
+    for lex_error in lexer_instance.errors:
+        error_report.add_lexical_error(
+            line=lex_error.line,
+            column=lex_error.column,
+            message=lex_error.message,
+            suggestion=f"Caractere ilegal '{lex_error.character}'. Verifique se este caractere é válido na linguagem Tonto."
+        )
+    
+    # Parsing
+    lexer_instance.lexer.lineno = 1
+    lexer_instance.lexer.input(data)
+    result = parser.parse(lexer=lexer_instance.lexer)
+    
+    if result is None:
+        result = {
+            'package': None,
+            'imports': [],
+            'declarations': [],
+            'summary': summary.get_summary_table(),
+            'error_report': error_report.get_error_report(),
+            'has_errors': True,
+        }
+    
+    return result
+
+def print_parse_results(result: Dict[str, Any]):
+    """
+    Imprime os resultados do parsing de forma formatada.
+    
+    Args:
+        result: Resultado retornado por parse_ontology()
+    """
+    print("\n")
+    print(result['summary'])
+    print("\n")
+    print(result['error_report'])
+    print("\n")
