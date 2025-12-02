@@ -1,0 +1,39 @@
+package teste
+
+enum Color {
+    RED,
+    GREEN,
+    BLUE
+}
+
+enum Size { SMALL }
+
+datatype AddressDataType {
+    street: string
+    city: number
+}
+
+kind Person {
+    name: string
+    age: number
+    address: AddressDataType
+}
+
+datatype CompanyDataType {
+    name: string
+}
+
+disjoint complete genset PersonAgeGroup where Child, Adult specializes Person
+
+genset PersonAgeGroup {
+    general Person
+    specifics Child, Adult
+}
+
+
+kind House {
+    color: string
+}
+
+@componentOf
+relation Person [0..*] <>-- possui -- [0..*] House
