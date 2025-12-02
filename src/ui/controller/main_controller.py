@@ -2,11 +2,13 @@ import os
 import collections
 
 from PyQt5.QtCore import QDir
-from PyQt5.QtWidgets import QApplication, QTreeWidgetItem, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMessageBox, QTreeWidgetItem
 
 from ui.controller import FilesHandler
-from ui.widgets import FileTab, FileTreeWidget
 from ui.view import MainView
+from ui.widgets.code_editor import CodeEditor
+from ui.widgets.file_tab import FileTab, GraphTab
+
 
 class MainController:
     def __init__(self):
@@ -62,7 +64,12 @@ class MainController:
                 file_tab = FileTab(filename, content)
                 self.files_handler.add_file(filename, file_tab)
                 self.view.add_file_tab(file_tab)
-                
+
+                graph_name = f'Graph: {filename}'
+                graph_tab = GraphTab(graph_name, content)
+                self.files_handler.add_file(graph_name, graph_tab)
+                self.view.add_file_tab(graph_tab)
+
                 # Não alterar o root path do file tree, apenas garantir que está atualizado
                 self.view.file_tree.refresh()
             else:
@@ -113,7 +120,7 @@ class MainController:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                file_tab = FileTab(file_path, content)
+                file_tab = GraphTab(file_path, content)
                 self.files_handler.add_file(file_path, file_tab)
                 self.view.add_file_tab(file_tab)
                 
@@ -152,8 +159,9 @@ class MainController:
                 self.update_display(tokens, errors, display_name)  # Passar erros também
 
                 file_tab = self.files_handler.files[filename]
-                file_tab.editor.highlighter.set_tokens(tokens)
-                file_tab.editor.highlighter.rehighlight()
+                if isinstance(file_tab.editor, CodeEditor):
+                    file_tab.editor.highlighter.set_tokens(tokens)
+                    file_tab.editor.highlighter.rehighlight()
 
     def analyze_all_files(self):
         tokens, errors = self.files_handler.analyze_all_files()  # Receber tokens e erros
@@ -167,7 +175,6 @@ class MainController:
         self.update_token_table(tokens)
         self.update_error_table(errors) 
         self.update_statistics(tokens, errors, source_name)
-        self.update_chart(tokens)
         self.update_details_table(tokens)
     
     def update_token_table(self, tokens):
@@ -187,28 +194,6 @@ class MainController:
         line_count = len(set(token.lineno for token in tokens))
 
         self.view.stats_widget.update_statistics(token_count, line_count, error_count)
-
-    def update_chart(self, tokens):
-        pass
-        # if not tokens:
-        #     self.view.chart_widget.ax.text(0.5, 0.5, 'Nenhum dado\npara exibir',
-        #                                    horizontalalignment='center', verticalalignment='center',
-        #                                    transform=self.view.chart_widget.ax.transAxes,
-        #                                    fontsize=12, color='gray')
-        #     self.view.chart_widget.ax.set_facecolor('#f0f0f0')
-        # else:
-        #     token_counts = collections.Counter(token.type for token in tokens)
-        #     labels = [
-        #         f"{token_type}\n({count})" for token_type, count in token_counts.most_common()]
-        #     sizes = list(token_counts.values())
-
-        #     colors = plt.cm.Pastel1(range(len(labels)))
-        #     self.view.chart_widget.ax.pie(sizes, labels=labels, autopct='%1.1f%%',
-        #                                   startangle=90, colors=colors, textprops={'fontsize': 8})
-
-        # self.view.chart_widget.ax.set_title(
-        #     'Distribuição de Tokens', pad=20, fontweight='bold')
-        # self.view.chart_widget.draw()
 
     def update_details_table(self, tokens):
         self.view.details_table.clear()
