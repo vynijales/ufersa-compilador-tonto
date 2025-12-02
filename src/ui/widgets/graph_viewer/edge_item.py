@@ -1,14 +1,8 @@
 import math
 
 from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import (
-    QPainterPath,
-    QPen,
-    QPolygonF,
-)
-from PyQt5.QtWidgets import (
-    QGraphicsPathItem,
-)
+from PyQt5.QtGui import QPainterPath, QPen, QPolygonF
+from PyQt5.QtWidgets import QGraphicsPathItem
 
 
 class EdgeItem(QGraphicsPathItem):
@@ -23,117 +17,118 @@ class EdgeItem(QGraphicsPathItem):
         self.source.add_edge(self)
         self.dest.add_edge(self)
 
-        self.setPen(QPen(Qt.black, 1, Qt.SolidLine, Qt.RoundCap, Qt.MiterJoin))
+        self.setPen(QPen(Qt.black, 2, Qt.SolidLine, Qt.RoundCap, Qt.MiterJoin))
         self.setZValue(-1)  # Coloca a aresta abaixo dos nós
         self.adjust()
 
     def adjust(self):
         """Calcula e desenha o caminho da seta."""
-
         if not self.source or not self.dest:
             return
 
         # Pontos centrais dos nós
-        source_point = self.source.pos()
-        dest_point = self.dest.pos()
+        source_center = self.source.pos()
+        dest_center = self.dest.pos()
 
-        line = dest_point - source_point
-        length = math.hypot(line.x(), line.y())
+        # Calcula o vetor direção
+        direction = dest_center - source_center
+        length = math.hypot(direction.x(), direction.y())
 
         if length == 0:
             return
 
-        # Normaliza o vetor e ajusta o comprimento para começar/terminar na borda do nó
-        unit_vec = line / length
-        start_point = source_point + unit_vec * (self.source.rect_width / 2)
-        end_point = dest_point - unit_vec * (self.dest.rect_width / 2)
         # Calcula pontos de intersecção com as bordas dos retângulos
         start_point = self._calculate_rect_intersection(
-            source_point, dest_point, self.source
+            source_center, dest_center, self.source
         )
         end_point = self._calculate_rect_intersection(
-            dest_point, source_point, self.dest
+            dest_center, source_center, self.dest
         )
 
+        # Cria o path da linha
         path = QPainterPath()
         path.moveTo(start_point)
         path.lineTo(end_point)
 
-        # Desenha a ponta da seta (indicador de dígrafo)
-        arrow_size = 10
-        angle = math.atan2(-line.y(), line.x())
+        # Calcula e adiciona a ponta da seta
+        arrow_head = self._create_arrow_head(start_point, end_point)
+        path.addPolygon(arrow_head)
 
-        dest_polygon = QPolygonF()
-        dest_polygon.append(end_point)
-        dest_polygon.append(
-            end_point
-            + QPointF(
-                math.sin(angle - math.pi / 3) * arrow_size,
-                math.cos(angle - math.pi / 3) * arrow_size,
-            )
-        )
-        dest_polygon.append(
-            end_point
-            + QPointF(
-                math.sin(angle - math.pi + math.pi / 3) * arrow_size,
-                math.cos(angle - math.pi + math.pi / 3) * arrow_size,
-            )
-        )
-
-        path.addPolygon(dest_polygon)
         self.setPath(path)
 
     def _calculate_rect_intersection(self, center, target, node):
         """
         Calcula o ponto de intersecção entre a linha center->target e a borda do retângulo do nó.
-
-        Args:
-            center: Centro do nó atual
-            target: Ponto de destino
-            node: NodeItem para calcular a intersecção
-
-        Returns:
-            QPointF: Ponto na borda do retângulo
         """
-        rect = node.boundingRect()
+        # Direção do centro para o target
+        direction = target - center
 
-        # Converte para coordenadas do nó
-        local_target = node.mapFromScene(
-            node.mapToScene(QPointF(0, 0)) + (target - center)
-        )
+        if abs(direction.x()) < 0.001 and abs(direction.y()) < 0.001:
+            return center
 
-        # Se o target está no centro, retorna uma borda qualquer
-        if abs(local_target.x()) < 0.001 and abs(local_target.y()) < 0.001:
-            return center + QPointF(rect.width() / 2, 0)
+        # Dimensões do retângulo (metade da largura e altura)
+        half_width = node.rect_width / 2
+        half_height = node.rect_height / 2
 
-        # Calcula intersecções com as bordas do retângulo
-        half_width = rect.width() / 2
-        half_height = rect.height() / 2
+        # Normaliza a direção
+        abs_dx = abs(direction.x())
+        abs_dy = abs(direction.y())
 
-        # Normaliza o vetor direção
-        dx = local_target.x()
-        dy = local_target.y()
-
-        # Calcula qual borda será intersectada primeiro
-        if abs(dx) > 0.001:
-            t_vertical = half_width / abs(dx)
+        # Calcula os parâmetros t para intersecções com bordas verticais e horizontais
+        if abs_dx > 0.001:
+            t_vertical = half_width / abs_dx
         else:
             t_vertical = float("inf")
 
-        if abs(dy) > 0.001:
-            t_horizontal = half_height / abs(dy)
+        if abs_dy > 0.001:
+            t_horizontal = half_height / abs_dy
         else:
             t_horizontal = float("inf")
 
-        # Usa o menor t (intersecção mais próxima)
+        # Usa o menor t (primeira intersecção)
         if t_vertical <= t_horizontal:
-            # Intersecção com borda vertical
-            x = half_width if dx > 0 else -half_width
-            y = dy * t_vertical
+            # Intersecção com borda vertical (esquerda ou direita)
+            intersection_x = half_width if direction.x() > 0 else -half_width
+            intersection_y = direction.y() * t_vertical
         else:
-            # Intersecção com borda horizontal
-            x = dx * t_horizontal
-            y = half_height if dy > 0 else -half_height
+            # Intersecção com borda horizontal (topo ou fundo)
+            intersection_x = direction.x() * t_horizontal
+            intersection_y = half_height if direction.y() > 0 else -half_height
 
-        # Converte de volta para coordenadas da cena
-        return center + QPointF(x, y)
+        return center + QPointF(intersection_x, intersection_y)
+
+    def _create_arrow_head(self, start_point, end_point):
+        """
+        Cria a ponta da seta no ponto final.
+        """
+        # Tamanho da seta
+        arrow_size = 24
+        arrow_angle = math.pi / 6  # 30 graus
+
+        # Calcula o ângulo da linha
+        direction = end_point - start_point
+        line_angle = math.atan2(direction.y(), direction.x())
+
+        # Pontos da seta
+        arrow_head = QPolygonF()
+
+        # Ponta da seta (no end_point)
+        arrow_head.append(end_point)
+
+        # Lado esquerdo da seta
+        left_angle = line_angle + math.pi - arrow_angle
+        left_point = end_point + QPointF(
+            arrow_size * math.cos(left_angle), arrow_size * math.sin(left_angle)
+        )
+        arrow_head.append(left_point)
+
+        # Ponta da seta (no end_point)
+        arrow_head.append(end_point)
+        # Lado direito da seta
+        right_angle = line_angle + math.pi + arrow_angle
+        right_point = end_point + QPointF(
+            arrow_size * math.cos(right_angle), arrow_size * math.sin(right_angle)
+        )
+        arrow_head.append(right_point)
+
+        return arrow_head

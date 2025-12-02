@@ -35,11 +35,12 @@ class GraphViewer(GraphViewerCore):
         for i, node_data in enumerate(graph_data):
             node_id = i
             name = node_data.get("name", f"Nó {i}")
+            original_data = node_data.get("data", {})
 
             # Usa a posição calculada pelo layout de árvore
             position = positions.get(node_id, QPointF(0, 0))
 
-            node_item = NodeItem(name, node_id, position)
+            node_item = NodeItem(name, node_id, position, original_data)
             self.scene().addItem(node_item)
             nodes[node_id] = node_item
 
@@ -85,10 +86,10 @@ class GraphViewer(GraphViewerCore):
         # Configurações do layout - ajustáveis conforme necessário
 
         # Distância vertical entre níveis (aumentada para melhor visualização)
-        level_height = 120
+        level_height = 150
 
         # Espaçamento horizontal mínimo entre nós
-        min_node_spacing = 100
+        min_node_spacing = 200
 
         # Estruturas para armazenar informações do layout
         positions = {}
@@ -98,9 +99,12 @@ class GraphViewer(GraphViewerCore):
         # Etapa 1: Calcular níveis de cada nó usando BFS
         self._assign_levels(graph_data, root_id, levels)
 
+        # Primeiro cria os nós temporariamente para obter suas dimensões reais
+        temp_nodes = self._create_temporary_nodes(graph_data)
+
         # Etapa 2: Calcular larguras das subárvores (processamento bottom-up)
         self._calculate_subtree_widths(
-            graph_data, levels, subtree_widths, min_node_spacing
+            graph_data, levels, subtree_widths, min_node_spacing, temp_nodes
         )
 
         # Etapa 3: Posicionar nós usando as larguras calculadas
@@ -154,6 +158,7 @@ class GraphViewer(GraphViewerCore):
         levels,
         subtree_widths,
         min_spacing,
+        temp_nodes,
     ):
         """
         Calcula a largura necessária para cada subárvore (processamento bottom-up).
@@ -169,16 +174,28 @@ class GraphViewer(GraphViewerCore):
                 children = graph_data[node_id].get("connections", [])
 
                 if not children:
-                    # Nó folha: largura mínima
-                    subtree_widths[node_id] = min_spacing
+                    # Nó folha: usa a largura real do nó + margem
+                    node_width = (
+                        temp_nodes[node_id].rect_width
+                        if node_id in temp_nodes
+                        else min_spacing
+                    )
+                    subtree_widths[node_id] = max(min_spacing, node_width + 40)
                 else:
                     # Nó interno: soma das larguras dos filhos
                     total_children_width = sum(
                         subtree_widths.get(child_id, min_spacing)
                         for child_id in children
                     )
-                    # A largura da subárvore é pelo menos a largura dos filhos
-                    subtree_widths[node_id] = max(min_spacing, total_children_width)
+                    # A largura da subárvore é pelo menos a largura dos filhos ou do nó atual
+                    node_width = (
+                        temp_nodes[node_id].rect_width
+                        if node_id in temp_nodes
+                        else min_spacing
+                    )
+                    subtree_widths[node_id] = max(
+                        min_spacing, total_children_width, node_width + 40
+                    )
 
     def _position_subtree(
         self, graph_data, node_id, center_x, y, positions, subtree_widths, level_height
@@ -294,3 +311,15 @@ class GraphViewer(GraphViewerCore):
         converter = ASTConverter()
         adjacency_list = converter.convert_ast_to_adjacency_list(ast_root)
         self.load_graph_from_json_data(adjacency_list)
+
+    def _create_temporary_nodes(self, graph_data):
+        """
+        Cria nós temporariamente para calcular suas dimensões reais.
+        """
+        temp_nodes = {}
+        for i, node_data in enumerate(graph_data):
+            name = node_data.get("name", f"Nó {i}")
+            original_data = node_data.get("data", {})
+            temp_node = NodeItem(name, i, QPointF(0, 0), original_data)
+            temp_nodes[i] = temp_node
+        return temp_nodes
