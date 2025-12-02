@@ -50,9 +50,15 @@ class ASTConverter:
             # 2. Processar Dicionário: Apenas chaves relevantes que devem gerar nós filhos
             for key, value in node_data.items():
                 if self._should_process_key(key, node_data):
-                    child_index = self._traverse_and_build(value, key)
-                    if child_index is not None:
-                        children_indices.append(child_index)
+                    # Para package, só cria nó se não for null
+                    if key == "package" and value is not None:
+                        child_index = self._traverse_and_build(value, key)
+                        if child_index is not None:
+                            children_indices.append(child_index)
+                    elif key != "package":
+                        child_index = self._traverse_and_build(value, key)
+                        if child_index is not None:
+                            children_indices.append(child_index)
 
         elif isinstance(node_data, list):
             # 3. Processar Lista: Cada item na lista que é um dict ou list é um filho
