@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QTreeWidgetItem
 from ui.controller import FilesHandler
 from ui.view import MainView
 from ui.widgets.code_editor import CodeEditor
-from ui.widgets.file_tab import FileTab, GraphTab
+from ui.widgets.file_tab import GraphTab, FileTab
 
 
 class MainController:
@@ -74,7 +74,6 @@ class MainController:
                 self.view.file_tree.refresh()
             else:
                 self.select_existing_tab(filename)
-
         except Exception as e:
             QMessageBox.critical(self.view, "Erro", f"Erro ao ler arquivo: {str(e)}")
 
