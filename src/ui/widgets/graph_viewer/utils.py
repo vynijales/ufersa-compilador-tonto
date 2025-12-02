@@ -14,7 +14,11 @@ class ASTConverter:
         Retorna o índice onde o nó atual foi inserido.
         """
         if not isinstance(node_data, (dict, list)):
-            # Se não for um dicionário ou lista, não é um nó que precisamos mapear
+            # Para strings simples em contextos específicos, cria nós
+            if key_context == "package" and isinstance(node_data, str):
+                return self._create_simple_node(node_data, "package")
+            elif key_context.startswith("import_") and isinstance(node_data, str):
+                return self._create_simple_node(node_data, "imports")
             return None
 
         # Verifica se é um elemento que deve ser ignorado (já exibido no nó pai)
@@ -53,15 +57,35 @@ class ASTConverter:
         elif isinstance(node_data, list):
             # 3. Processar Lista: Cada item na lista que é um dict ou list é um filho
             for sub_index, sub_value in enumerate(node_data):
-                child_index = self._traverse_and_build(
-                    sub_value, f"{key_context}_Item_{sub_index}"
-                )
+                # Para imports, usa o valor da string como contexto
+                if key_context == "imports" and isinstance(sub_value, str):
+                    child_context = f"import_{sub_value}"
+                else:
+                    child_context = f"{key_context}_Item_{sub_index}"
+                
+                child_index = self._traverse_and_build(sub_value, child_context)
                 if child_index is not None:
                     children_indices.append(child_index)
 
         # 4. Atualizar a lista de conexões do nó atual
         self.adjacency_list[current_node_index]["connections"] = children_indices
 
+        return current_node_index
+
+    def _create_simple_node(self, value, node_type):
+        """
+        Cria um nó simples para valores string (package, imports).
+        """
+        node_name = f"{node_type}: {value}" if value else f"{node_type}: (null)"
+        current_node_index = len(self.adjacency_list)
+        
+        node_entry = {
+            "name": node_name,
+            "connections": [],
+            "data": {"type": node_type, "name": value}
+        }
+        
+        self.adjacency_list.append(node_entry)
         return current_node_index
 
     def _should_skip_node(self, node_data, key_context):
@@ -101,10 +125,12 @@ class ASTConverter:
             "domain_cardinality",
             "image",
             "image_cardinality",
+            "errors",
+            "warnings",
         }
 
-        # Processa apenas chaves que representam estruturas hierárquicas reais
-        structural_keys = {"declarations", "imports"}
+        # Processa chaves que representam estruturas hierárquicas reais
+        structural_keys = {"declarations", "imports", "package"}
 
         return key in structural_keys
 

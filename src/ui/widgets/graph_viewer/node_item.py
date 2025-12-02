@@ -76,6 +76,46 @@ class NodeItem(QGraphicsItem):
                 "header": QColor(138, 43, 226),
                 "border": QColor(102, 51, 153),
             },
+            "subkind": {
+                "bg": QColor(255, 240, 220),
+                "header": QColor(255, 152, 0),
+                "border": QColor(230, 126, 34),
+            },
+            "phase": {
+                "bg": QColor(230, 245, 255),
+                "header": QColor(3, 169, 244),
+                "border": QColor(2, 136, 209),
+            },
+            "mode": {
+                "bg": QColor(232, 245, 233),
+                "header": QColor(76, 175, 80),
+                "border": QColor(46, 125, 50),
+            },
+            "quality": {
+                "bg": QColor(255, 248, 225),
+                "header": QColor(255, 193, 7),
+                "border": QColor(255, 143, 0),
+            },
+            "event": {
+                "bg": QColor(255, 235, 238),
+                "header": QColor(244, 67, 54),
+                "border": QColor(211, 47, 47),
+            },
+            "situation": {
+                "bg": QColor(224, 247, 250),
+                "header": QColor(0, 188, 212),
+                "border": QColor(0, 151, 167),
+            },
+            "package": {
+                "bg": QColor(227, 233, 255),
+                "header": QColor(63, 81, 181),
+                "border": QColor(48, 63, 159),
+            },
+            "imports": {
+                "bg": QColor(224, 255, 255),
+                "header": QColor(0, 150, 136),
+                "border": QColor(0, 121, 107),
+            },
             "default": {
                 "bg": QColor(245, 245, 245),
                 "header": QColor(158, 158, 158),
@@ -225,7 +265,29 @@ class NodeItem(QGraphicsItem):
                     }
                 )
 
-        elif node_type == "relator":
+        elif node_type in ["relator", "subkind", "phase", "mode", "quality", "event", "situation"]:
+            # Adiciona informação de categoria se existir (para subkinds, phases, roles)
+            category = self.data.get("category")
+            if category:
+                sections.append(
+                    {
+                        "type": "category",
+                        "title": "Category:",
+                        "content": [category],
+                    }
+                )
+
+            # Adiciona informação de especialização se existir
+            specializes = self.data.get("specializes")
+            if specializes:
+                sections.append(
+                    {
+                        "type": "specialization",
+                        "title": "Specializes:",
+                        "content": [specializes],
+                    }
+                )
+
             content = self.data.get("content", {})
             if content:  # Verifica se content não é None
                 attributes = content.get("attributes", [])
@@ -255,7 +317,7 @@ class NodeItem(QGraphicsItem):
                         sections.append(
                             {"type": "relations", "title": "Relations:", "content": rel_content}
                         )
-            
+
             # Se content existe mas está vazio, mostra seções apropriadas
             if content is not None:
                 # Adiciona informação sobre atributos vazios se necessário
@@ -271,9 +333,21 @@ class NodeItem(QGraphicsItem):
                 # Content é None
                 sections.append(
                     {
-                        "type": "empty_content", 
+                        "type": "empty_content",
                         "title": "Content:",
                         "content": ["(null)"],
+                    }
+                )
+
+        elif node_type in ["package", "imports"]:
+            # Nós simples para package e imports - apenas mostram o nome
+            node_name = self.data.get("name", "")
+            if node_name:
+                sections.append(
+                    {
+                        "type": "value",
+                        "title": "Value:",
+                        "content": [node_name],
                     }
                 )
 
@@ -524,34 +598,34 @@ class NodeItem(QGraphicsItem):
         if rel_type == "relation_internal":
             connector = relation.get("connector", {})
             connector_type = connector.get("connector", "--")
-    
+
             domain_card = relation.get("domain_cardinality", "")
             image = relation.get("image", "")
             image_card = relation.get("image_cardinality", "")
-    
+
             # Formato melhorado: @stereotype [card] -- [card] Target
             parts = []
-    
+
             if rel_stereotype:
                 parts.append(f"@{rel_stereotype}")
-    
+
             # Monta a string da relação de forma mais legível
             relation_parts = []
-            
+
             if domain_card:
                 relation_parts.append(domain_card)
-            
+
             relation_parts.append(connector_type)
-            
+
             if image_card:
                 relation_parts.append(image_card)
-            
+
             if image:
                 relation_parts.append(image)
-            
+
             if relation_parts:
                 parts.append(" ".join(relation_parts))
-    
+
             result = " ".join(parts) if parts else "mediation relation"
             return result
 
