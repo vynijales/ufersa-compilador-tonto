@@ -155,8 +155,8 @@ class MainController:
                     break
 
             if filename:
-                tokens, errors = self.files_handler.analyze_file(filename)  # Receber tokens e erros
-                self.update_display(tokens, errors, display_name)  # Passar erros também
+                tokens, errors, syntactic_errors = self.files_handler.analyze_file(filename)  # Receber tokens, erros léxicos e sintáticos
+                self.update_display(tokens, errors, syntactic_errors, display_name)  # Passar todos os erros
 
                 file_tab = self.files_handler.files[filename]
                 if isinstance(file_tab.editor, CodeEditor):
@@ -164,17 +164,17 @@ class MainController:
                     file_tab.editor.highlighter.rehighlight()
 
     def analyze_all_files(self):
-        tokens, errors = self.files_handler.analyze_all_files()  # Receber tokens e erros
-        self.update_display(tokens, errors, f"Todos os {len(self.files_handler.files)} arquivos")  # Passar erros
+        tokens, errors, syntactic_errors = self.files_handler.analyze_all_files()  # Receber tokens, erros léxicos e sintáticos
+        self.update_display(tokens, errors, syntactic_errors, f"Todos os {len(self.files_handler.files)} arquivos")  # Passar todos os erros
 
         for file_tab in self.files_handler.files.values():
             file_tab.editor.highlighter.set_tokens(file_tab.tokens)
             file_tab.editor.highlighter.rehighlight()
 
-    def update_display(self, tokens, errors, source_name):  # Adicionar parâmetro errors
+    def update_display(self, tokens, errors, syntactic_errors, source_name):  # Adicionar parâmetros de erros
         self.update_token_table(tokens)
-        self.update_error_table(errors) 
-        self.update_statistics(tokens, errors, source_name)
+        self.update_error_table(errors, syntactic_errors) 
+        self.update_statistics(tokens, errors, syntactic_errors, source_name)
         self.update_details_table(tokens)
     
     def update_token_table(self, tokens):
@@ -183,14 +183,14 @@ class MainController:
             item = QTreeWidgetItem([str(token.lineno), str(token.token_pos), token.type, token.value])
             self.view.token_table.addTopLevelItem(item)
 
-    def update_error_table(self, errors):
-        """Atualiza a tabela de erros"""
-        self.view.error_table.update_errors(errors)
+    def update_error_table(self, lexical_errors, syntactic_errors):
+        """Atualiza a tabela de erros com erros léxicos e sintáticos"""
+        self.view.error_table.update_all_errors(lexical_errors, syntactic_errors)
 
 
-    def update_statistics(self, tokens, errors, source_name):
+    def update_statistics(self, tokens, errors, syntactic_errors, source_name):
         token_count = len(tokens)
-        error_count = len(errors)
+        error_count = len(errors) + len(syntactic_errors)  # Soma de erros léxicos e sintáticos
         line_count = len(set(token.lineno for token in tokens))
 
         self.view.stats_widget.update_statistics(token_count, line_count, error_count)
@@ -250,7 +250,7 @@ class MainController:
     def clear_all(self):
         self.files_handler.clear_files()
         self.view.clear_all_tabs()
-        self.update_display([], [], "")  # Passar lista vazia de erros também
+        self.update_display([], [], [], "")  # Passar listas vazias de tokens e erros
         # Restaurar file tree para diretório atual
         self.view.file_tree.set_root_path(QDir.currentPath())
     

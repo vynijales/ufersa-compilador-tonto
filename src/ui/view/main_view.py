@@ -129,7 +129,7 @@ class MainView(QMainWindow):
 
         # Tabela de erros
         self.error_table = ErrorTable()
-        layout.addWidget(QLabel("Erros Léxicos"))
+        layout.addWidget(QLabel("Erros Léxicos e Sintáticos"))
         layout.addWidget(self.error_table)
 
         # Estatísticas
