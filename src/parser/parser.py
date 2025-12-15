@@ -1,8 +1,14 @@
-from ply import yacc
-from lexer.lexer import Token, tokens, TontoLexer, KEYWORDS, CLASS_STEREOTYPES, RELATION_STEREOTYPES, META_ATTRIBUTES, NATIVE_TYPES
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-from difflib import get_close_matches
+from typing import Any, Dict, List
+
+from ply import yacc
+
+from lexer.lexer import (
+    Token,
+    TontoLexer,
+    tokens,
+)
+from parser.utils import find_similar_token, generate_smart_suggestion
 
 _ = Token, tokens
 
@@ -17,7 +23,7 @@ class ParseError:
     message: str
     error_type: str  # 'LEXICAL' ou 'SYNTACTIC'
     suggestion: str = ""
-    
+
     def __str__(self):
         error_label = "ERRO LÉXICO" if self.error_type == "LEXICAL" else "ERRO SINTÁTICO"
         result = f"[{error_label} - Linha {self.line}, Coluna {self.column}]\n"
@@ -36,7 +42,7 @@ class OntologySummary:
         self.enums: Dict[str, List[str]] = {}  # {nome: [valores]}
         self.gensets: List[Dict] = []
         self.external_relations: List[Dict] = []
-        
+
     def add_class(self, name: str, stereotype: str, specializes=None, category=None):
         if name not in self.classes:
             self.classes[name] = {
@@ -46,28 +52,28 @@ class OntologySummary:
                 'relations': [],
                 'specializes': specializes
             }
-    
+
     def add_attribute_to_class(self, class_name: str, attr_name: str, attr_type: str):
         if class_name in self.classes:
             self.classes[class_name]['attributes'].append({'name': attr_name, 'type': attr_type})
-    
+
     def add_relation_to_class(self, class_name: str, relation: Dict):
         if class_name in self.classes:
             self.classes[class_name]['relations'].append(relation)
-    
+
     def get_summary_table(self) -> str:
         """Gera tabela de síntese formatada"""
         lines = []
         lines.append("="*80)
         lines.append("TABELA DE SÍNTESE DA ONTOLOGIA")
         lines.append("="*80)
-        
+
         # Pacote
         if self.package_name:
             lines.append(f"\nPACOTE: {self.package_name}")
         else:
             lines.append("\nPACOTE: (não declarado)")
-        
+
         # Imports
         lines.append(f"\nIMPORTS ({len(self.imports)}):")
         if self.imports:
@@ -75,7 +81,7 @@ class OntologySummary:
                 lines.append(f"  - {imp}")
         else:
             lines.append("  (nenhum)")
-        
+
         # Classes
         lines.append(f"\nCLASSES ({len(self.classes)}):")
         if self.classes:
@@ -94,7 +100,7 @@ class OntologySummary:
                     lines.append(f"      - {rel['relation_stereotype']} -> {rel['image']}")
         else:
             lines.append("  (nenhuma)")
-        
+
         # Datatypes
         lines.append(f"\nDATATYPES ({len(self.datatypes)}):")
         if self.datatypes:
@@ -102,7 +108,7 @@ class OntologySummary:
                 lines.append(f"  - {dt}")
         else:
             lines.append("  (nenhum)")
-        
+
         # Enums
         lines.append(f"\nENUMS ({len(self.enums)}):")
         if self.enums:
@@ -110,7 +116,7 @@ class OntologySummary:
                 lines.append(f"  • {enum_name}: {', '.join(values)}")
         else:
             lines.append("  (nenhum)")
-        
+
         # Gensets
         lines.append(f"\nGENERALIZATION SETS ({len(self.gensets)}):")
         if self.gensets:
@@ -120,7 +126,7 @@ class OntologySummary:
                 lines.append(f"    Restrições: {restrictions}")
         else:
             lines.append("  (nenhum)")
-        
+
         # Relações externas
         lines.append(f"\nRELAÇÕES EXTERNAS ({len(self.external_relations)}):")
         if self.external_relations:
@@ -128,7 +134,7 @@ class OntologySummary:
                 lines.append(f"  • {rel['relation_stereotype']}: {rel['domain']} -> {rel['image']}")
         else:
             lines.append("  (nenhuma)")
-        
+
         lines.append("\n" + "="*80)
         return "\n".join(lines)
 
@@ -137,23 +143,23 @@ class ErrorReport:
     def __init__(self):
         self.lexical_errors: List[ParseError] = []
         self.syntactic_errors: List[ParseError] = []
-    
+
     def add_lexical_error(self, line: int, column: int, message: str, suggestion: str = ""):
         self.lexical_errors.append(ParseError(line, column, message, "LEXICAL", suggestion))
-    
+
     def add_syntactic_error(self, line: int, column: int, message: str, suggestion: str = ""):
         self.syntactic_errors.append(ParseError(line, column, message, "SYNTACTIC", suggestion))
-    
+
     def has_errors(self) -> bool:
         return len(self.lexical_errors) > 0 or len(self.syntactic_errors) > 0
-    
+
     def get_error_report(self) -> str:
         """Gera relatório de erros formatado"""
         lines = []
         lines.append("="*80)
         lines.append("RELATÓRIO DE ERROS DA ONTOLOGIA")
         lines.append("="*80)
-        
+
         # Erros léxicos
         if self.lexical_errors:
             lines.append(f"\nERROS LÉXICOS ({len(self.lexical_errors)}):")
@@ -162,7 +168,7 @@ class ErrorReport:
                 lines.append("\n" + str(error))
         else:
             lines.append("\nERROS LÉXICOS: Nenhum erro léxico encontrado.")
-        
+
         # Erros sintáticos
         if self.syntactic_errors:
             lines.append(f"\n\nERROS SINTÁTICOS ({len(self.syntactic_errors)}):")
@@ -171,128 +177,18 @@ class ErrorReport:
                 lines.append("\n" + str(error))
         else:
             lines.append("\n\nERROS SINTÁTICOS: Nenhum erro sintático encontrado.")
-        
+
         lines.append("\n" + "="*80)
-        
+
         if not self.has_errors():
             lines.append("\n✓ Análise léxica e sintática concluída sem erros!")
             lines.append("="*80)
-        
+
         return "\n".join(lines)
 
 # Instâncias globais
 summary = OntologySummary()
 error_report = ErrorReport()
-
-# Função auxiliar para fuzzy matching
-def find_similar_token(token: str, token_type: str = None) -> Optional[str]:
-    """
-    Encontra tokens similares usando fuzzy matching.
-    
-    Args:
-        token: O token que causou erro
-        token_type: Tipo do token esperado (opcional)
-    
-    Returns:
-        String com sugestão ou None
-    """
-    token_lower = token.lower()
-    suggestions = []
-    
-    # Buscar em palavras-chave
-    keywords = list(KEYWORDS.keys())
-    close_keywords = get_close_matches(token_lower, keywords, n=3, cutoff=0.6)
-    if close_keywords:
-        suggestions.extend(close_keywords)
-    
-    # Buscar em estereótipos de classe
-    close_class_stereotypes = get_close_matches(token_lower, CLASS_STEREOTYPES, n=3, cutoff=0.6)
-    if close_class_stereotypes:
-        suggestions.extend(close_class_stereotypes)
-    
-    # Buscar em estereótipos de relação
-    close_relation_stereotypes = get_close_matches(token_lower, RELATION_STEREOTYPES, n=3, cutoff=0.6)
-    if close_relation_stereotypes:
-        suggestions.extend(close_relation_stereotypes)
-    
-    # Buscar em tipos nativos
-    close_native_types = get_close_matches(token_lower, NATIVE_TYPES, n=3, cutoff=0.6)
-    if close_native_types:
-        suggestions.extend(close_native_types)
-    
-    # Buscar em meta-atributos
-    close_meta_attrs = get_close_matches(token_lower, META_ATTRIBUTES, n=3, cutoff=0.6)
-    if close_meta_attrs:
-        suggestions.extend(close_meta_attrs)
-    
-    if suggestions:
-        # Remover duplicatas mantendo ordem
-        unique_suggestions = list(dict.fromkeys(suggestions))
-        if len(unique_suggestions) == 1:
-            return f"Você quis dizer '{unique_suggestions[0]}'?"
-        else:
-            return f"Você quis dizer: {', '.join(f"'{s}'" for s in unique_suggestions[:3])}?"
-    
-    return None
-
-def generate_smart_suggestion(token_value: str, token_type: str, context: str = "") -> str:
-    """
-    Gera sugestão inteligente baseada no token e contexto.
-    
-    Args:
-        token_value: Valor do token que causou erro
-        token_type: Tipo do token
-        context: Contexto adicional do erro
-    
-    Returns:
-        Sugestão de correção
-    """
-    # Tentar encontrar tokens similares
-    similar = find_similar_token(token_value, token_type)
-    
-    if similar:
-        return similar
-    
-    # Sugestões baseadas no tipo de token
-    if token_type == 'IDENTIFIER':
-        return "Verifique se o identificador está correto. Identificadores devem começar com letra ou underscore."
-    elif token_type == 'NATIVE_TYPE':
-        return f"Tipo nativo '{token_value}' em posição inesperada. Esperado ':' antes do tipo."
-    elif token_type in ['OPEN_BRACE', 'CLOSE_BRACE']:
-        return "Verifique se os blocos estão balanceados. Cada '{{' deve ter um '}}' correspondente."
-    elif token_type == 'COMMA':
-        return "Vírgula inesperada. Verifique a sintaxe da lista de elementos."
-    elif token_type == 'COLON':
-        return "':' inesperado. Verifique se há um identificador antes dos dois-pontos."
-    else:
-        return "Verifique a sintaxe próxima a este token. Pode estar faltando um delimitador ou palavra-chave."
-
-def suggest_missing_syntax(context: str) -> str:
-    """
-    Sugere sintaxe que pode estar faltando baseado no contexto.
-    
-    Args:
-        context: Descrição do contexto do erro
-    
-    Returns:
-        Sugestão de correção
-    """
-    suggestions = {
-        'attribute': "Atributos devem seguir o formato: 'nome: tipo' ou 'nome: tipo [cardinalidade]'",
-        'class': "Classes devem seguir o formato: 'stereotype NomeClasse { ... }'",
-        'enum': "Enums devem seguir o formato: 'enum NomeEnum { VALOR1, VALOR2, ... }'",
-        'relation': "Relações devem seguir o formato: '@stereotype [card] -- nome -- [card] ClasseDestino'",
-        'package': "Declaração de pacote: 'package nome_do_pacote'",
-        'import': "Declaração de import: 'import nome_do_pacote'",
-    }
-    
-    for key, suggestion in suggestions.items():
-        if key in context.lower():
-            return suggestion
-    
-    return "Verifique a sintaxe e estrutura do código."
-
-# =========== Ontology ===========
 
 
 # Regra principal que define a estrutura de uma ontologia
@@ -315,33 +211,33 @@ def p_ontology(p):
     # Preencher sumário
     summary.package_name = package_name
     summary.imports = imports
-    
+
     # Processar declarações para coleta de estatísticas
     current_class = None
     for decl in declarations:
-        if decl['type'] in ['kind', 'category', 'subkind', 'role', 'phase', 'mixin', 
+        if decl['type'] in ['kind', 'category', 'subkind', 'role', 'phase', 'mixin',
                             'roleMixin', 'phaseMixin', 'mode', 'quality', 'collective',
                             'quantity', 'event', 'situation', 'process', 'historicalRole',
                             'historicalRoleMixin', 'intrinsicMode', 'extrinsicMode', 'relator']:
             # É uma classe
             current_class = decl['name']
             summary.add_class(decl['name'], decl['type'], decl.get('specializes'), decl.get('category'))
-            
+
             if decl.get('content'):
                 for attr in decl['content'].get('attributes', []):
                     summary.add_attribute_to_class(current_class, attr['name'], attr['datatype'])
                 for rel in decl['content'].get('relations', []):
                     summary.add_relation_to_class(current_class, rel)
-        
+
         elif decl['type'] == 'datatype':
             summary.datatypes.append(decl['name'])
-        
+
         elif decl['type'] == 'enum':
             summary.enums[decl['name']] = decl['values']
-        
+
         elif decl['type'] == 'genset':
             summary.gensets.append(decl)
-        
+
         elif decl['type'] == 'relation_external':
             summary.external_relations.append(decl)
 
@@ -425,7 +321,7 @@ def p_package(p):
 
 def p_class_declaration(p):
     '''class_declaration : CLASS_STEREOTYPE IDENTIFIER class_body
-                         | CLASS_STEREOTYPE IDENTIFIER 
+                         | CLASS_STEREOTYPE IDENTIFIER
                          | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY class_body
                          | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY
     '''
@@ -456,8 +352,8 @@ def p_class_declaration(p):
             'category': p[4],
             'content': None,
         }
-    
-def p_class_body(p): 
+
+def p_class_body(p):
     '''class_body : OPEN_BRACE class_attribute_and_relation_list CLOSE_BRACE'''
 
     attributes = []
@@ -799,7 +695,7 @@ def p_error(p):
     if p:
         # Gerar sugestão inteligente baseada no token
         suggestion = generate_smart_suggestion(str(p.value), p.type)
-        
+
         error_report.add_syntactic_error(
             line=p.lineno,
             column=0,
@@ -823,10 +719,10 @@ def parse_ontology(data: str) -> Dict[str, Any]:
     """
     Realiza o parsing de uma ontologia Tonto e retorna a árvore sintática,
     tabela de síntese e relatório de erros.
-    
+
     Args:
         data: Código fonte da ontologia em formato string
-    
+
     Returns:
         Dicionário contendo:
         - ast: Árvore sintática abstrata
@@ -838,15 +734,15 @@ def parse_ontology(data: str) -> Dict[str, Any]:
     global summary, error_report
     summary = OntologySummary()
     error_report = ErrorReport()
-    
+
     # Processar erros léxicos
     lexer_instance = TontoLexer()
     list(lexer_instance.tokenize(data))  # Força tokenização para coletar erros
-    
+
     for lex_error in lexer_instance.errors:
         # Gerar sugestão inteligente para erros léxicos
         suggestion = f"Caractere ilegal '{lex_error.character}'."
-        
+
         # Tentar identificar se é uma palavra-chave escrita errada
         if hasattr(lex_error, 'value') and len(lex_error.character) > 1:
             similar = find_similar_token(lex_error.character)
@@ -856,19 +752,19 @@ def parse_ontology(data: str) -> Dict[str, Any]:
                 suggestion += " Verifique se este caractere é válido na linguagem Tonto."
         else:
             suggestion += " Verifique se este caractere é válido na linguagem Tonto."
-        
+
         error_report.add_lexical_error(
             line=lex_error.line,
             column=lex_error.column,
             message=lex_error.message,
             suggestion=suggestion
         )
-    
+
     # Parsing
     lexer_instance.lexer.lineno = 1
     lexer_instance.lexer.input(data)
     result = parser.parse(lexer=lexer_instance.lexer)
-    
+
     if result is None:
         result = {
             'package': None,
@@ -878,13 +774,13 @@ def parse_ontology(data: str) -> Dict[str, Any]:
             'error_report': error_report.get_error_report(),
             'has_errors': True,
         }
-    
+
     return result
 
 def print_parse_results(result: Dict[str, Any]):
     """
     Imprime os resultados do parsing de forma formatada.
-    
+
     Args:
         result: Resultado retornado por parse_ontology()
     """
