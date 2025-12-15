@@ -1,6 +1,0 @@
-package CyclicSpecialization 
-
-kind Person
-event Death specializes Person, Human
-subkind Human specializes Person, Death
-

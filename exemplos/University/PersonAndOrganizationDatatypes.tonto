@@ -1,6 +1,0 @@
-package PersonAndOrganizationDatatypes
-
-datatype Address {
-  country: string
-  firstLine: string
-}
