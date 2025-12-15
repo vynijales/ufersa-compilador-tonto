@@ -32,6 +32,7 @@ class ParseError:
             result += f"\n  Sugestão: {self.suggestion}"
         return result
 
+
 class OntologySummary:
     """Coleta estatísticas sobre os construtos da ontologia"""
     def __init__(self):
@@ -138,6 +139,7 @@ class OntologySummary:
         lines.append("\n" + "="*80)
         return "\n".join(lines)
 
+
 class ErrorReport:
     """Gerencia o relatório de erros léxicos e sintáticos"""
     def __init__(self):
@@ -190,12 +192,9 @@ class ErrorReport:
 summary = OntologySummary()
 error_report = ErrorReport()
 
-
 # Regra principal que define a estrutura de uma ontologia
 def p_ontology(p):
-    """ontology : package imports declarations
-    | imports declarations
-    """
+    """ontology : package imports declarations"""
     package_name = None
     imports = []
     declarations = []
@@ -252,6 +251,7 @@ def p_ontology(p):
 
 
 # Lista de declarações (classes, enums, gensets, etc.)
+# Retorna lista com declarações ou lista vazia
 def p_declarations(p):
     """
     declarations : declarations declaration
@@ -293,6 +293,8 @@ def p_datatype(p):
 
 
 # Lista de imports de outros pacotes
+# Retorna uma lista com nome dos imports
+# Caso nenhum import seja encontrado, retorna lista vazia
 def p_imports(p):
     """
     imports : imports import
@@ -328,30 +330,35 @@ def p_class_declaration(p):
 
     if len(p) == 4:
         p[0] = {
-            "type": p[1],
+            "type": "class",
+            "stereotype": p[1],
             "name": p[2],
             "content": p[3],
         }
     elif len(p) == 3:
         p[0] = {
-            "type": p[1],
+            "type": "class",
+            "stereotype": p[1],
             "name": p[2],
             "content": None,
         }
     elif len(p) == 6:
         p[0] = {
-            'type': p[1],
+            "type": "class",
+            "stereotype": p[1],
             'name': p[2],
             'category': p[4],
             'content': p[5],
         }
     else:  # len(p) == 5
         p[0] = {
-            'type': p[1],
+            "type": "class",
+            "stereotype": p[1],
             'name': p[2],
             'category': p[4],
             'content': None,
         }
+
 
 def p_class_body(p):
     '''class_body : OPEN_BRACE class_attribute_and_relation_list CLOSE_BRACE'''
@@ -400,21 +407,24 @@ def p_class_specialization(p):
 
     if len(p) == 6:
         p[0] = {
-            "type": p[1],
+            "type": "class",
+            "stereotype": p[1],
             "name": p[2],
             "specializes": p[4],
             "content": p[5],
         }
     elif len(p) == 5:
         p[0] = {
-            "type": p[1],
+            "type": "class",
+            "stereotype": p[1],
             "name": p[2],
             "specializes": p[4],
             "content": None,
         }
     elif len(p) == 8:
         p[0] = {
-            'type': p[1],
+            "type": "class",
+            "stereotype": p[1],
             'name': p[2],
             'category': p[4],
             'specializes': p[6],
@@ -422,7 +432,8 @@ def p_class_specialization(p):
         }
     else:  # len(p) == 7
         p[0] = {
-            'type': p[1],
+            "type": "class",
+            "stereotype": p[1],
             'name': p[2],
             'category': p[4],
             'specializes': p[6],
