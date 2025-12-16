@@ -399,10 +399,10 @@ def p_class_attribute_and_relation(p):
 
 # Declaração de classe com herança/especialização
 def p_class_specialization(p):
-    """class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER class_body
-                         | CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW IDENTIFIER
-                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW IDENTIFIER class_body
-                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW IDENTIFIER
+    """class_declaration : CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW identifier_list class_body
+                         | CLASS_STEREOTYPE IDENTIFIER SPECIALIZES_KW identifier_list
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW identifier_list class_body
+                         | CLASS_STEREOTYPE IDENTIFIER OF_KW ONTOLOGICAL_CATEGORY SPECIALIZES_KW identifier_list
     """
 
     if len(p) == 6:
@@ -439,6 +439,17 @@ def p_class_specialization(p):
             'specializes': p[6],
             'content': None,
         }
+
+# Retorna uma lista não vazia de identificadores
+def p_identifier_list(p):
+    """identifier_list : identifier_list COMMA IDENTIFIER
+                       | IDENTIFIER
+    """
+
+    if len(p) == 4:
+        p[0] = p[1] + [p[3]]
+    else:
+        p[0] = [p[1]]
 
 
 # Lista de atributos de uma classe
@@ -538,13 +549,13 @@ def p_enum_values(p):
 
 # Declaração de genset (conjunto de generalização)
 def p_genset_declaration(p):
-    """genset_declaration : GENSET_KW IDENTIFIER OPEN_BRACE GENERAL_KW IDENTIFIER SPECIFICS_KW comma_separated_identifiers CLOSE_BRACE"""
+    """genset_declaration : optional_genset_restrictions GENSET_KW IDENTIFIER OPEN_BRACE GENERAL_KW IDENTIFIER SPECIFICS_KW comma_separated_identifiers CLOSE_BRACE"""
     p[0] = {
         "type": "genset",
-        "genset_restrictions": [],
-        "name": p[2],
-        "specifics": p[7],
-        "general": p[5],
+        "genset_restrictions": p[1],
+        "name": p[3],
+        "specifics": p[8],
+        "general": p[6],
     }
 
 
