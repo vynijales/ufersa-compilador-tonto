@@ -194,7 +194,7 @@ class PatternValidator:
             # Coleta os roles mediados
             mediated_roles = [m.get('image') for m in mediations if m.get('image')]
 
-            # Verifica se os roles mediados são realmente roles
+            # Verifica se as classes mediadas existem
             for role_name in mediated_roles:
                 if not role_name:
                     continue
@@ -203,11 +203,6 @@ class PatternValidator:
                     self.errors.append(SemanticError(
                         f"Relator Pattern violation: Relator '{relator.name}' mediates "
                         f"'{role_name}' which is not defined."
-                    ))
-                elif role_class.stereotype not in ['role', 'historicalRole']:
-                    self.errors.append(SemanticError(
-                        f"Relator Pattern warning: Relator '{relator.name}' mediates "
-                        f"'{role_name}' which is not a role (stereotype: {role_class.stereotype})."
                     ))
 
             # Verifica se existe uma relação @material entre os roles
