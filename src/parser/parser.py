@@ -194,14 +194,14 @@ error_report = ErrorReport()
 
 # Regra principal que define a estrutura de uma ontologia
 def p_ontology(p):
-    """ontology : package imports declarations"""
+    """ontology : imports package declarations"""
     package_name = None
     imports = []
     declarations = []
 
     if len(p) == 4:
-        package_name = p[1]
-        imports = p[2]
+        imports = p[1]
+        package_name = p[2]
         declarations = p[3]
     elif len(p) == 3:
         imports = p[1]
