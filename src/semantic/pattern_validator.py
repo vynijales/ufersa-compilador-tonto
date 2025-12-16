@@ -3,20 +3,18 @@ from semantic.symbol_table import SymbolTable
 
 
 class PatternValidator:
-    """Valida os padrões ontológicos definidos"""
-
     def __init__(self, symbol_table: SymbolTable):
         self.symbol_table = symbol_table
         self.errors: list[SemanticError] = []
 
     def validate_all_patterns(self):
-        """Executa validação de todos os padrões"""
         self.validate_subkind_pattern()
         self.validate_role_pattern()
         self.validate_phase_pattern()
         self.validate_relator_pattern()
         self.validate_mode_pattern()
         self.validate_rolemixin_pattern()
+        self.validate_genset_homogeneity()
 
     # Pattern 1: Subkind Pattern
     def validate_subkind_pattern(self):
@@ -341,4 +339,64 @@ class PatternValidator:
                     self.errors.append(SemanticError(
                         f"RoleMixin Pattern warning: RoleMixin '{rolemixin.name}' roles should "
                         f"specialize different kinds (found {len(parent_kinds)} kind(s))."
+                    ))
+
+    # Pattern 7: Genset Homogeneity
+    def validate_genset_homogeneity(self):
+        """
+        Valida que um genset não mistura esteriótipos incompatíveis.
+
+        Regras:
+        - Rigid sortals (subkind, category) não podem ser misturados com
+          anti-rigid sortals (role, phase, historicalRole) no mesmo genset
+        - Isso garante que o genset mantenha coerência ontológica
+        """
+        for genset in self.symbol_table.gensets:
+            stereotypes = {}
+
+            # Coleta os estereótipos de cada specific
+            for specific_name in genset.specifics:
+                specific_class = self.symbol_table.get_class(specific_name)
+                if specific_class:
+                    stereotypes[specific_name] = specific_class.stereotype
+
+            if not stereotypes:
+                continue
+
+            # Define grupos de categorias ontológicas
+            rigid_sortals = {'subkind', 'category'}
+            anti_rigid_sortals = {'role', 'phase', 'historicalRole'}
+            semi_rigid_sortals = {'roleMixin', 'phaseMixin'}
+
+            # Verifica quais categorias estão presentes
+            stereotype_set = set(stereotypes.values())
+            has_rigid = bool(stereotype_set & rigid_sortals)
+            has_anti_rigid = bool(stereotype_set & anti_rigid_sortals)
+
+            # Erro: mistura de rigid com anti-rigid
+            if has_rigid and has_anti_rigid:
+                rigid_classes = [name for name, st in stereotypes.items() if st in rigid_sortals]
+                anti_rigid_classes = [name for name, st in stereotypes.items() if st in anti_rigid_sortals]
+
+                self.errors.append(SemanticError(
+                    f"Genset '{genset.name}' mixes incompatible ontological categories. "
+                    f"Rigid sortals ({', '.join(rigid_classes)}) cannot be mixed with "
+                    f"anti-rigid sortals ({', '.join(anti_rigid_classes)}) in the same genset. "
+                ))
+
+            # Aviso: mistura de diferentes tipos de anti-rigid
+            roles_and_phases = {'role', 'historicalRole', 'phase'}
+            mixed_anti_rigid = stereotype_set & roles_and_phases
+            if len(mixed_anti_rigid) > 1:
+                has_role = bool(stereotype_set & {'role', 'historicalRole'})
+                has_phase = 'phase' in stereotype_set
+
+                if has_role and has_phase:
+                    role_classes = [name for name, st in stereotypes.items()
+                                   if st in {'role', 'historicalRole'}]
+                    phase_classes = [name for name, st in stereotypes.items() if st == 'phase']
+
+                    self.errors.append(SemanticError(
+                        f"Genset '{genset.name}' mixes roles ({', '.join(role_classes)}) "
+                        f"with phases ({', '.join(phase_classes)}). "
                     ))

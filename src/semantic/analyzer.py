@@ -8,6 +8,31 @@ from semantic.symbol_table import SymbolTable
 class SemanticAnalyzer:
     """Analisador semântico principal"""
 
+    # Estereótipos que são ultimate sortals
+    ULTIMATE_SORTALS = {
+        'kind', 'collective', 'quantity', 'relator',
+        'quality', 'mode', 'intrinsicMode', 'extrinsicMode',
+        'type', 'powertype'
+    }
+
+    # Estereótipos que DEVEM especializar um ultimate sortal
+    NON_ULTIMATE_SORTALS = {
+        'subkind', 'phase', 'role', 'historicalRole'
+    }
+
+    # Classificação por rigidez
+    RIGID_STEREOTYPES = {
+        'kind', 'collective', 'quantity', 'subkind', 'category'
+    }
+
+    ANTI_RIGID_STEREOTYPES = {
+        'role', 'phase', 'historicalRole', 'roleMixin'
+    }
+
+    SEMI_RIGID_STEREOTYPES = {
+        'mixin', 'phaseMixin'
+    }
+
     def __init__(self):
         self.symbol_table = SymbolTable()
         self.errors: List[SemanticError] = []
@@ -78,6 +103,16 @@ class SemanticAnalyzer:
                 f"Kind '{name}' cannot specialize another class. "
                 f"Kinds are the top-level sortals."
             ))
+
+        # Valida que non-ultimate sortals DEVEM especializar um ultimate sortal
+        if stereotype in self.NON_ULTIMATE_SORTALS:
+            if not specializes or len(specializes) == 0:
+                ultimate_list = ', '.join(sorted(self.ULTIMATE_SORTALS))
+                self.errors.append(SemanticError(
+                    f"This class does not specialize a Ultimate Sortal. "
+                    f"Every sortal class must specialize a unique Ultimate Sortal "
+                    f"({ultimate_list})"
+                ))
 
         # Cria classe
         attributes = []
@@ -167,6 +202,9 @@ class SemanticAnalyzer:
                             f"Class '{class_name}' specializes undefined class '{parent}'."
                         ))
 
+        # Valida hierarquia de rigidez: rigid não pode especializar anti-rigid
+        self._validate_rigidity_hierarchy()
+
         # Valida gensets
         for genset in self.symbol_table.gensets:
             # Verifica se o general existe
@@ -202,6 +240,50 @@ class SemanticAnalyzer:
                     self.errors.append(SemanticError(
                         f"Class '{class_name}' has relation to undefined class '{image}'."
                     ))
+
+    def _validate_rigidity_hierarchy(self):
+        """
+        Valida que rigid universals não podem especializar anti-rigid universals.
+
+        Exemplos de erros:
+        - subkind especializando role
+        - kind especializando phase
+        - category especializando roleMixin
+        """
+        for class_name, tonto_class in self.symbol_table.classes.items():
+            stereotype = tonto_class.stereotype
+
+            # Verifica se é um estereótipo rigid
+            if stereotype not in self.RIGID_STEREOTYPES:
+                continue
+
+            # Verifica todos os parents (diretos e indiretos)
+            visited = set()
+            to_visit = list(tonto_class.specializes) if tonto_class.specializes else []
+
+            while to_visit:
+                parent_name = to_visit.pop(0)
+
+                if parent_name in visited:
+                    continue
+                visited.add(parent_name)
+
+                parent_class = self.symbol_table.get_class(parent_name)
+                if not parent_class:
+                    continue
+
+                parent_stereotype = parent_class.stereotype
+
+                # ERRO: rigid especializando anti-rigid
+                if parent_stereotype in self.ANTI_RIGID_STEREOTYPES:
+                    self.errors.append(SemanticError(
+                        f"Rigid universal '{class_name}' ({stereotype}) cannot specialize "
+                        f"anti-rigid universal '{parent_name}' ({parent_stereotype}). "
+                    ))
+                    break
+
+                if parent_class.specializes:
+                    to_visit.extend(parent_class.specializes)
 
 
 def analyze(ast: dict) -> Tuple[SymbolTable, List[SemanticError]]:
