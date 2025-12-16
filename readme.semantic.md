@@ -9,13 +9,13 @@
   - [Principais Decisões de Design](#principais-decisões-de-design)
     - [1. Análise em Três Fases](#1-análise-em-três-fases)
     - [2. Tabela de Símbolos Centralizada](#2-tabela-de-símbolos-centralizada)
-    - [3. Validação de Estereótipos UFO](#3-validação-de-estereótipos-ufo)
+    - [3. Validação de Estereótipos](#3-validação-de-estereótipos)
     - [4. Validação de Hierarquia de Rigidez](#4-validação-de-hierarquia-de-rigidez)
     - [5. Separação de Responsabilidades](#5-separação-de-responsabilidades)
   - [Estrutura de Módulos](#estrutura-de-módulos)
   - [Validações Implementadas](#validações-implementadas)
     - [Validações Básicas](#validações-básicas)
-    - [Validações Ontológicas (UFO)](#validações-ontológicas-ufo)
+    - [Validações Ontológicas](#validações-ontológicas)
     - [Validações de Padrões](#validações-de-padrões)
   - [Como Usar](#como-usar)
   - [Exemplos de Erros Detectados](#exemplos-de-erros-detectados)
@@ -67,7 +67,7 @@ A análise semântica foi dividida em **três fases distintas** para garantir qu
 - Valida a **hierarquia de rigidez** (rigid não pode especializar anti-rigid).
 
 **Fase 3: Validação de Padrões Ontológicos**
-- Delega ao `PatternValidator` a verificação de padrões complexos da UFO.
+- Delega ao `PatternValidator` a verificação de padrões complexos.
 - Valida restrições de gensets (disjoint, complete, overlapping).
 - Valida que non-ultimate sortals especializam exatamente um ultimate sortal.
 
@@ -141,13 +141,13 @@ O analisador foi modularizado em componentes com responsabilidades bem definidas
 src/semantic/
 ├── analyzer.py          # Analisador principal e orquestrador
 ├── symbol_table.py      # Estrutura de dados para símbolos
-├── pattern_validator.py # Validações de padrões ontológicos UFO
+├── pattern_validator.py # Validações de padrões ontológicos
 └── dataclasses.py       # Classes de dados (TontoClass, Genset, etc.)
 ```
 
 - **analyzer.py**: Implementa o `SemanticAnalyzer` com as três fases de análise.
 - **symbol_table.py**: Implementa a `SymbolTable` com métodos para adicionar e consultar símbolos.
-- **pattern_validator.py**: Implementa o `PatternValidator` para validações complexas de padrões UFO.
+- **pattern_validator.py**: Implementa o `PatternValidator` para validações complexas de padrões.
 - **dataclasses.py**: Define estruturas de dados como `TontoClass`, `Genset`, `TontoRelation`, `SemanticError`.
 
 ---
@@ -159,7 +159,7 @@ src/semantic/
 - Existência de referências (especializações, relações, gensets).
 - Restrições de estereótipos (ex.: `kind` não pode especializar outra classe).
 
-### 🔹 Validações Ontológicas (UFO)
+### 🔹 Validações Ontológicas
 - **Ultimate Sortals**: non-ultimate sortals devem especializar um ultimate sortal.
 - **Hierarquia de Rigidez**: rigid não pode especializar anti-rigid.
 - **Gensets**: validação de restrições `disjoint`, `complete` e `overlapping`.
