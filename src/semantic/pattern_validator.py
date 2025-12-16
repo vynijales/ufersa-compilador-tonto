@@ -33,13 +33,13 @@ class PatternValidator:
                     if c.stereotype == 'subkind' and c.specializes and class_name in c.specializes
                 ]
 
-                # Se um kind possui subkinds então deve existir um genset
-                if len(subkinds) > 0:
+                # Genset só é necessário quando há 2 ou mais subkinds
+                if len(subkinds) >= 2:
                     gensets = self.symbol_table.get_gensets_for_general(class_name)
 
                     if not gensets:
                         self.errors.append(SemanticError(
-                            f"Subkind Pattern violation: Kind '{class_name}' has subkinds "
+                            f"Subkind Pattern violation: Kind '{class_name}' has multiple subkinds "
                             f"({', '.join([s.name for s in subkinds])}) but no genset is defined. "
                             f"A genset with 'disjoint' restriction is required."
                         ))
@@ -82,13 +82,14 @@ class PatternValidator:
                     if c.stereotype == 'role'
                 ]
 
-                if len(roles) > 0:
+                # Genset só é necessário quando há 2 ou mais roles
+                if len(roles) >= 2:
                     # Deve existir um genset
                     gensets = self.symbol_table.get_gensets_for_general(class_name)
 
                     if not gensets:
                         self.errors.append(SemanticError(
-                            f"Role Pattern violation: Kind '{class_name}' has roles "
+                            f"Role Pattern violation: Kind '{class_name}' has multiple roles "
                             f"({', '.join([r.name for r in roles])}) but no genset is defined."
                         ))
                         continue
@@ -120,6 +121,7 @@ class PatternValidator:
         Valida o padrão Phase:
         - kind ClassName
         - phase PhaseName specializes ClassName
+        - Deve ter pelo menos 2 phases (não faz sentido ter apenas 1)
         - Deve ter genset com general=ClassName
         - Genset DEVE ter 'disjoint' (obrigatório)
         """
@@ -131,13 +133,21 @@ class PatternValidator:
                     if c.stereotype == 'phase'
                 ]
 
-                if len(phases) > 0:
+                # Se há apenas 1 phase, isso é um erro
+                if len(phases) == 1:
+                    self.errors.append(SemanticError(
+                        f"Phase Pattern violation: Kind '{class_name}' has only one phase "
+                        f"('{phases[0].name}')."
+                    ))
+
+                # Genset só é necessário quando há 2 ou mais phases
+                if len(phases) >= 2:
                     # Deve existir um genset
                     gensets = self.symbol_table.get_gensets_for_general(class_name)
 
                     if not gensets:
                         self.errors.append(SemanticError(
-                            f"Phase Pattern violation: Kind '{class_name}' has phases "
+                            f"Phase Pattern violation: Kind '{class_name}' has multiple phases "
                             f"({', '.join([p.name for p in phases])}) but no genset is defined. "
                             f"A genset with 'disjoint' restriction is MANDATORY."
                         ))
